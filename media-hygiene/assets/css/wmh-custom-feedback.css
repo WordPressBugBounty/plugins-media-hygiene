@@ -1,0 +1,15 @@
+.wmh-plugin-deactive-btn {
+    background-color: #2271b1 !important;
+    color: #ffffff !important;
+    border: none !important;
+}
+
+#wmh-feedback-modal {
+	overflow: hidden !important;
+}
+
+.wmh-deactive-loader-div {
+    text-align: center;
+    color: green;
+	margin: 2px;
+}

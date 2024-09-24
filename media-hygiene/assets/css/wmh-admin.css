@@ -1,0 +1,1127 @@
+/************ WP list table and button css **************/
+img {
+    max-width: 100%;
+}
+
+.wmh-btn {
+    min-width: 175px;
+    height: 36px;
+    line-height: 32px !important;
+    font-size: 12px;
+}
+
+.button-danger,
+.button-danger:hover {
+    background: red !important;
+    border-color: red !important;
+    color: #ffffff !important;
+}
+
+#wpcontent {
+    height: 100%;
+    padding-left: 20px;
+    padding-right: 20px;
+    background: #f0f0f1;
+}
+
+.wp-list-table {
+    margin-top: 15px;
+}
+
+.notice {
+    margin: 5px 0px;
+}
+
+div.error,
+div.updated {
+    margin: 20px 0px;
+}
+
+.updates-table td input,
+.widefat tfoot td input,
+.widefat th input,
+.widefat thead td input {
+    margin: 0 0 0 0px;
+}
+
+.pdf-alt-icon {
+    content: "\f1c1";
+    font-size: 60px;
+    color: red;
+}
+
+.zip-alt-icon,
+.text-html-alt-icon,
+.video-alt-icon,
+.doc-alt-icon,
+.ppt-alt-icon,
+.xlsx-alt-icon,
+.audio-alt-icon,
+.null-alt-icon,
+.octet-stream-alt-icon,
+.text-alt-icon {
+    content: "\f1c6";
+    font-size: 60px;
+    color: #2271b1;
+}
+
+.media-url {
+    cursor: pointer;
+}
+
+.wmh-btn-time {
+    display: flex;
+    row-gap: 10px;
+    flex-wrap: wrap;
+    column-gap: 25px;
+    justify-content: start;
+    align-items: center;
+}
+
+.last-scan-time p {
+    margin: 0;
+}
+
+#date {
+    max-height: 30px;
+    border-radius: 3px;
+    font-size: 14px;
+}
+
+.sl-box {
+    margin-bottom: 4.5px;
+}
+
+/********** Progress bar css. *************/
+.progress {
+    margin: 20px auto;
+    padding: 0;
+    width: 100%;
+    height: 30px !important;
+    overflow: hidden;
+    background: #e5e5e5;
+    border-radius: 6px;
+}
+
+.bar {
+    position: relative;
+    float: left;
+    min-width: 1%;
+    height: 100%;
+    background: #2271b1;
+}
+
+.percent {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    margin: 0;
+    font-family: tahoma, arial, helvetica;
+    font-size: 12px;
+    color: white;
+}
+
+.scan-data-status {
+    margin-top: -30px;
+}
+
+.scan-data-status span {
+    font-size: 12px;
+}
+
+/**************** Dashboard css ******************/
+
+.admin-accord .card-header button:after {
+    font-family: 'Dashicons';
+    content: "\f142";
+    float: right;
+}
+
+.admin-accord .card-header button.collapsed:after {
+    font-family: 'Dashicons';
+    content: "\f140";
+}
+
+.box {
+    background: #fff !important;
+}
+
+.wmh-title,
+.wmh-ans,
+.type-name,
+.type-percetage,
+.type-count {
+    color: #333333 !important;
+}
+
+.wmh-ans,
+.type-count {
+    font-size: 30px;
+    font-weight: 700;
+    padding: 5px 10px;
+}
+
+.wmh-title {
+    font-size: 14px;
+    padding: 8.5px 5px;
+    font-weight: 600;
+    background: #e8e8e8;
+    color: #000 !important;
+}
+
+.type-percetage {
+    font-size: 14px;
+    font-weight: 700;
+    width: 50%;
+    color: #000 !important;
+    background: #e8e8e8;
+    padding: 7px 5px;
+}
+
+#media-break-down-content .row.row-main .card-body,
+#general-summary-accordion-content .row.row-main .card-body {
+    padding: 0;
+}
+
+.type-name {
+    font-size: 14px;
+    font-weight: 600;
+    width: 50%;
+    background: #ffffff;
+    padding: 7px 5px;
+    border-top: 2px solid #e8e8e8;
+}
+
+.wmh-dashboard {
+    display: flex;
+    column-gap: 20px;
+    row-gap: 20px;
+    justify-content: start;
+}
+
+.wmh-dashboard .admin-accord {
+    width: 100%;
+}
+
+.wmh-dashboard .card {
+    max-width: 100%;
+    padding: 0;
+    border: 1px solid #d5d5d5;
+    border-radius: 0px !important;
+}
+
+.wmh-dashboard .card-header {
+    border-top: 0 !important;
+    background: #fff;
+    border-bottom: 1px solid #d5d5d5;
+}
+
+.wmh-media-percentage {
+    display: flex;
+    justify-content: center;
+    align-items: stretch;
+}
+
+.wmh-heading h1 {
+    font-size: 23px;
+    font-weight: 400;
+    color: #1d2327;
+}
+
+.row-main {
+    margin: 0 !important;
+}
+
+.btn-link {
+    padding: 0 !important;
+    color: #000 !important;
+    font-weight: 600 !important;
+    text-transform: capitalize;
+}
+
+.btn-link:hover,
+.btn-link:focus {
+    outline: 0 !important;
+    box-shadow: 0 0 0 0.2rem rgb(0 123 255 / 0%) !important;
+    text-decoration: none !important;
+}
+
+.single-check-image {
+    margin: 20px 10px !important;
+}
+
+.column-cb input {
+    margin: 10px !important;
+}
+
+.wmh-icon-info {
+    color: #17a2b8;
+    font-size: 19px !important;
+}
+
+ul.wmh-compatibility-notice {
+    column-count: 3;
+    font-size: 13px;
+    font-weight: 500;
+    color: red;
+}
+
+ul.wmh-compatibility-notice li {
+    list-style: circle;
+}
+
+/*************** Setting page css ****************/
+
+.card {
+    max-width: 100%;
+}
+
+/* Main setting tab html css. ex nav-link, nav-bar, color ... */
+
+.wmh_settings_container {
+    margin-top: 0px;
+}
+
+.wmh_settings_container .nav-item .nav-link {
+    color: black;
+}
+
+.wmh_settings_container .nav-link {
+    float: left;
+    border: 1px solid #c3c4c7;
+    border-bottom: none;
+    margin-left: 1em;
+    padding: 7px 20px;
+    font-size: 14px;
+    line-height: 1.71428571;
+    font-weight: 600;
+    background: #dcdcde;
+    color: #50575e;
+    text-decoration: none;
+    white-space: nowrap;
+}
+
+.wmh_settings_container ul.nav.nav-tabs {
+    background: #f0f0f1;
+    width: 100.2%;
+    margin-left: -1px;
+}
+
+.main-area {
+    margin: 24px;
+}
+
+.custom-control-input:checked~.custom-control-label::before {
+    border-color: #2271b1 !important;
+    background-color: #2271b1 !important;
+}
+
+.plugin-used-note {
+    color: red;
+}
+
+.wmh-save-settings-button .save_scan_option_button {
+    width: 120px;
+    height: 40px;
+}
+
+/******* Status tab ***********/
+.copy-site-info-card {
+    max-width: 100% !important;
+    margin-top: 10px;
+    border-radius: unset !important;
+    padding: 5px 10px !important;
+
+}
+
+.copy-site-info-card-header {
+    padding: 0 !important;
+    margin-bottom: 0 !important;
+    background-color: unset !important;
+    border-bottom: none !important;
+    border-top: none !important;
+}
+
+.copy-site-info-card-header button {
+    font-size: 13px !important;
+    line-height: unset !important;
+
+}
+
+/******** FAQ tab *************/
+.faq-card {
+    max-width: 100% !important;
+    margin-top: 10px;
+    border-radius: unset !important;
+    padding: 5px 10px !important;
+}
+
+.faq-card-header {
+    padding: 0 !important;
+    margin-bottom: 0 !important;
+    background-color: unset !important;
+    border-bottom: none !important;
+    border-top: none !important;
+}
+
+.faq-card-header button {
+    font-size: 13px !important;
+    line-height: unset !important;
+    font-weight: 500;
+    padding: 0;
+}
+
+.faq-card-header button:focus {
+    box-shadow: none !important;
+}
+
+.copy-site-info-card-header button {
+    width: 100%;
+    text-align: left;
+}
+
+.btn-check:checked+.btn,
+.btn.active,
+.btn.show,
+:not(.btn-check)+.btn:active {
+    border: 0px none;
+}
+
+.card.faq-card h5.faq-header a {
+    float: right;
+}
+
+.card.faq-card h5.faq-header {
+    font-size: 15px;
+    margin-bottom: 0;
+    display: flex;
+    padding: 7px 0 10px;
+    justify-content: space-between;
+}
+
+.wmh_settings_container li {
+    margin-bottom: 0;
+}
+
+.wmh_settings_container ul li .nav-link {
+    font-size: 16px;
+}
+
+
+/******** Addons tab css ****************/
+.wmh-addons-logo {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    overflow: hidden;
+    height: auto;
+    background: #fff;
+    transition: box-shadow .2s ease-in-out 0s, background .2s ease-in-out 0s;
+}
+
+.wmh-addons-text h2,
+.wmh-addons-message {
+    text-align: center;
+}
+
+.wmh-addons-message-activated {
+    text-align: center;
+}
+
+.wmh-addons-message-activated button {
+    width: 100px;
+    padding: 10px;
+    border-radius: 3px;
+    font-weight: 500;
+    font-size: 12px;
+}
+
+.wmh-addons-message button {
+    padding: 10px;
+    border: none;
+    outline: none;
+    color: #FFF;
+    font-family: inherit;
+    font-weight: 500;
+    font-size: 17px;
+    cursor: pointer;
+    position: relative;
+    z-index: 0;
+    border-radius: 12px;
+    width: 150px;
+}
+
+.wmh-addons-message button::after {
+    content: "";
+    z-index: -1;
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    background-color: rgb(46, 46, 46);
+    left: 0;
+    top: 0;
+    border-radius: 10px;
+}
+
+.wmh-addons-message button::before {
+    content: "";
+    background: linear-gradient(45deg,
+            #fdb715, #0473aa, #3e0000, #3ceeb9,
+            #fdb715, #0473aa, #3e0000, #3ceeb9);
+    position: absolute;
+    top: -2px;
+    left: -2px;
+    background-size: 600%;
+    z-index: -1;
+    width: calc(100% + 4px);
+    height: calc(100% + 4px);
+    filter: blur(8px);
+    animation: glowing 20s linear infinite;
+    transition: opacity .3s ease-in-out;
+    border-radius: 10px;
+    opacity: 0;
+}
+
+.wmh-addons-name p {
+    text-align: center;
+    font-size: 16px;
+    font-weight: 600;
+    color: #000;
+}
+
+.wmh-addons-logo img {
+    border: 1px solid #d2d2d247;
+    border-radius: 8px;
+    margin-bottom: 12px;
+}
+
+/********** Image scan tab css *************/
+.wmh-heading h1 {
+    font-size: 23px;
+    font-weight: 400;
+    color: #333333;
+}
+
+.wmh-heading-savebutton {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+
+.wmh-card-section {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-start;
+    align-items: baseline;
+    column-gap: 20px;
+    row-gap: 20px;
+}
+
+.content-label {
+    justify-content: flex-start;
+    align-items: center;
+    margin: 0 !important;
+    width: 85%;
+}
+
+.wmh-number-image-scan {
+    background-color: #f5f5f5;
+    padding: 15px;
+}
+
+.form-group {
+    margin-bottom: 0 !important;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    column-gap: 10px;
+    width: 50%;
+}
+
+.plugin-used-note {
+    margin: 0 !important;
+}
+
+.wmh-scanner-setting-card {
+    padding: 0;
+}
+
+.wmh-scanner-setting-title-switch {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-right: 15px;
+}
+
+.wmh-scanner-setting-title-switch-2 {
+    display: flex;
+    padding-right: 15px;
+    align-items: center;
+    border-bottom: 1px solid #d3d3d5;
+}
+
+.wmh-settings-title h6 {
+    margin-bottom: 0;
+}
+
+.wmh-settings-title {
+    padding: 15px 20px;
+    display: flex;
+    align-items: center;
+    width: auto;
+    position: relative;
+}
+
+.wmh-settings-title a {
+    font-size: 13px;
+    margin-left: 15px;
+}
+
+.wmh-scanner-setting-info {
+    padding: 20px;
+}
+
+.wmh-on {
+    padding-left: 15px;
+    width: 90%;
+}
+
+.wmh-info p {
+    margin: 0;
+}
+
+/************ Licence page css *********/
+.wmh-button-form {
+    display: flex;
+}
+
+.dir-btn {
+    width: 200px;
+    height: 35px;
+    font-size: 15px;
+}
+
+#dir_to_scan {
+
+    width: 400px;
+    height: 35px;
+    font-size: 14px;
+}
+
+/* Wmh media type info */
+.card-body.text-center.media-type-body {
+    padding: 0 !important;
+}
+
+.wmh-media-type-info {
+    display: flex;
+    flex-wrap: wrap;
+    align-content: center;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.wmh-media-type-text {
+    padding: 10px;
+}
+
+.wmh-media-type-text p {
+    color: #000;
+    font-size: 30px;
+    font-weight: 700;
+    margin: 0;
+    line-height: 1;
+}
+
+.wmh-media-type-extantion p {
+    display: inline-block;
+    padding: 5px 10px;
+    word-break: break-all;
+    width: 100%;
+    height: 100%;
+    text-align: center;
+}
+
+.wmh-media-type-info p {
+    color: #202020;
+    font-size: 14px;
+    font-weight: 600;
+    margin: 0;
+    background: #fff;
+    width: 50%;
+    padding: 6px 5px;
+    border-top: 2px solid #e8e8e8;
+    border-bottom: 2px solid #e8e8e8;
+}
+
+.wmh-media-type-extantion {
+    display: flex;
+    min-height: 40px;
+    justify-content: center;
+    overflow: hidden;
+    align-items: center;
+}
+
+.wmh-media-type-info span {
+    color: black;
+    margin: 0;
+    font-size: 16px;
+    font-weight: 700;
+    width: 50%;
+    background: #e8e8e8;
+    padding: 6px 5px;
+}
+
+.wmh-media-type-extantion p {
+    font-size: 15px;
+    color: #000;
+    font-weight: 600;
+    margin: 0;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.media-type-info {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: start;
+    padding: 0px !important;
+}
+
+.media-type-info .card .text-white .box {
+    margin-top: 0 !important;
+}
+
+.tooltip-1:hover .right p {
+    margin-bottom: 0;
+}
+
+.media-type-info .col-xl-2 {
+    display: flex;
+}
+
+.media-type-info .col-xl-2 .card.text-white.box {
+    width: 100%;
+}
+
+.media-type-body {
+    padding: 5px !important;
+}
+
+.row.row-main.media-type-info {
+    align-items: stretch;
+}
+
+/* WMH media Header and Get help page css start */
+.embed-responsive .embed-responsive-item,
+.embed-responsive embed,
+.embed-responsive iframe,
+.embed-responsive object,
+.embed-responsive video {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    border: 0;
+}
+
+.embed-responsive {
+    position: relative;
+    display: block;
+    width: 100%;
+    padding: 0;
+    overflow: hidden;
+}
+
+.embed-responsive-16by9::before {
+    padding-top: 56.25%;
+}
+
+.embed-responsive::before {
+    display: block;
+    content: "";
+}
+
+.btn-link {
+    text-decoration: none !important;
+}
+
+.wmh-header ul.navbar-nav li .nav-link.active {
+    color: #2271b1;
+    font-weight: 500;
+    border-color: #2271b1;
+}
+
+.wmh-header ul.navbar-nav li .nav-link {
+    padding: 15px 15px;
+    border-bottom: 2px solid transparent;
+    color: #000;
+    font-weight: 500;
+}
+
+.wmh-header ul.navbar-nav li {
+    margin-bottom: 0;
+}
+
+@media screen and (max-width: 767px) {
+    .wmh-header {
+        position: relative;
+    }
+
+    /*.wmh-header a.btn.btn-primary {
+        position: absolute;
+        right: 10px;
+        top: 10px;
+    }*/
+}
+
+/* WMH media Header and Get help page css End*/
+
+/* Image scan from settings page toggle css */
+.wmh-switch input[type=checkbox] {
+    height: 0;
+    width: 0;
+    visibility: hidden;
+    display: none;
+}
+
+.wmh-switch label {
+    cursor: pointer;
+    text-indent: -9999px;
+    width: 35px;
+    height: 18px;
+    background: grey;
+    display: inline-block;
+    border-radius: 100px;
+    position: relative;
+    margin-top: 0px;
+}
+
+.wmh-switch label:after {
+    content: '';
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    width: 11px;
+    height: 11px;
+    background: #fff;
+    border-radius: 90px;
+    transition: 0.3s;
+}
+
+.wmh-switch input:checked+label {
+    background: #2271b1;
+}
+
+.wmh-switch input:checked+label:after {
+    left: calc(100% - 3px);
+    transform: translateX(-100%);
+}
+
+/* For logo shadow on click  */
+.media-hygiene-logo a:focus {
+    box-shadow: unset !important;
+}
+
+.notice-alert .important-notice {
+    color: #d63638;
+}
+
+.notice-alert .important-notice-text {
+    color: #2271b1;
+}
+
+.notice .important-notice-text {
+    color: #2271b1;
+}
+
+/* Tooltip */
+.tooltip-1 {
+    display: inline-block;
+    position: absolute;
+    text-align: left;
+    right: 0px;
+    top: 15px;
+}
+
+a#restore-default-file-exe {
+    font-size: 13px;
+}
+
+.wmh-delete-page-media .tooltip-1,
+.wmh-download-page-media .tooltip-1,
+.wmh-button-form .tooltip-1 {
+    right: 10px;
+    top: 5px;
+}
+
+.wmh-button-form,
+.wmh-delete-page-media,
+.wmh-download-page-media,
+.ccpt {
+    position: relative;
+}
+
+.ccpt-right {
+    right: 25px;
+    top: 30px;
+}
+
+.tooltip-1 svg.svg-inline--fa.fa-circle-question {
+    color: black;
+}
+
+.tooltip-1 .right {
+    width: 200px;
+    top: 50%;
+    left: 50%;
+    margin-left: 20px;
+    transform: translate(0, -50%);
+    padding: 10px 20px;
+    color: #FFFFFF;
+    background-color: #1D2327;
+    font-weight: normal;
+    font-size: 13px;
+    border-radius: 3px;
+    position: absolute;
+    z-index: 99999999;
+    box-sizing: border-box;
+    box-shadow: 0 1px 8px #FFFFFF;
+    display: none;
+    white-space: initial;
+}
+
+.tooltip-1:hover .right {
+    display: block;
+}
+
+.wmh-download-page-media .tooltip-1 svg.svg-inline--fa.fa-circle-question,
+.wmh-delete-page-media .tooltip-1 svg.svg-inline--fa.fa-circle-question,
+.wmh-button-form .tooltip-1 svg.svg-inline--fa.fa-circle-question {
+    color: #fff;
+}
+
+.tooltip-1 .right i {
+    position: absolute;
+    top: 50%;
+    right: 100%;
+    margin-top: -12px;
+    width: 12px;
+    height: 24px;
+    overflow: hidden;
+}
+
+.tooltip-1 .right i::after {
+    content: '';
+    position: absolute;
+    width: 12px;
+    height: 12px;
+    left: 0;
+    top: 50%;
+    transform: translate(50%, -50%) rotate(-45deg);
+    background-color: #1D2327;
+    box-shadow: 0 1px 8px #FFFFFF;
+}
+
+.tooltip-1 .right a {
+    color: #fff;
+}
+
+.datepicker.datepicker-dropdown table tr td span {
+    height: 35px;
+    line-height: 35px;
+}
+
+.datepicker.datepicker-dropdown table.table-condensed {
+    font-size: 13px;
+}
+
+.btn.wmh-button {
+    background: #2271b1;
+    border-color: #2271b1;
+}
+
+.btn.wmh-button:hover,
+.licence-status-btn:hover {
+    background: #135e96 !important;
+    border-color: #135e96 !important;
+}
+
+span.copied-success {
+    font-size: 14px;
+}
+
+.container.plugin-status {
+    display: flex;
+    height: 90vh;
+    width: 100%;
+    justify-content: center;
+    align-items: center;
+}
+
+.container.plugin-status .wrap {
+    width: 100%;
+}
+
+ul.navbar-nav.wp-mh li:last-child>a>span {
+    position: absolute;
+    right: 0px;
+    top: 8px;
+    font-size: 11px;
+    color: #2271b1;
+    font-weight: 700;
+}
+
+a#restore-default-file-exe {
+    color: #2271b1;
+}
+
+.wpm-height {
+    min-height: 90vh;
+}
+
+.search-box input[name="s"] {
+    width: 175px;
+}
+
+form#form_search_post {
+    margin-top: 10px;
+}
+
+table#error-log-list thead {
+    background: #ddd;
+}
+
+div#error-log-list_wrapper div#error-log-list_filter {
+    margin-bottom: 10px;
+}
+
+table#error-log-list {
+    border: 1px solid #ddd !important;
+    font-size: 13px;
+}
+
+#error-log-list_wrapper #error-log-list_info,
+#error-log-list_wrapper #error-log-list_paginate {
+    font-size: 13px;
+}
+
+.copy-site-info-card-header h5.status-label-btn .btn {
+    font-size: 15px !important;
+}
+
+#error-log-list_wrapper #error-log-list_paginate {
+    padding-top: 0.7em;
+}
+
+#error-log-list_wrapper #error-log-list_paginate .paginate_button {
+    padding: 0.3em 1em;
+}
+
+/* Responsiv add css*/
+
+@media (min-width: 992px) and (max-width: 1499px) {
+    .media-type-info .col-xl-2 {
+        width: 24.5%;
+    }
+
+    #media-break-down-content .row.row-main .col-xl-4,
+    #general-summary-accordion-content .row.row-main .col-xl-4 {
+        width: 50%;
+    }
+
+}
+
+@media (min-width: 768px) and (max-width: 1099px) {
+
+    .type-name,
+    .wmh-title,
+    .wmh-media-type-info p,
+    .wmh-media-type-extantion p {
+        font-size: 12px;
+    }
+
+    .wmh_settings_container ul.nav.nav-tabs {
+        width: 100.3%;
+    }
+
+    .type-percetage,
+    .wmh-media-type-info span {
+        font-size: 14px;
+    }
+
+    #media-break-down-content .card-body,
+    #general-summary-accordion-content .card-body,
+    #media-type-content .card-body {
+        padding: 0;
+    }
+
+}
+
+@media screen and (max-width: 788px) {
+    .wmh-dashboard {
+        flex-wrap: wrap;
+    }
+
+    ul.wmh-compatibility-notice {
+        column-count: 1;
+    }
+}
+
+/* deleted media page */
+table#wmh-deleted-media-list thead {
+    background: #ddd;
+}
+
+div#wmh-deleted-media-list div#wmh-deleted-media-list {
+    margin-bottom: 10px;
+}
+
+table#wmh-deleted-media-list {
+    border: 1px solid #ddd !important;
+    font-size: 13px;
+}
+
+.status-accordion.accordion .accordion-button:not(.collapsed) {
+    background: transparent !important;
+}
+
+/* update database button hightlight */
+.wmh-update-database-btn-highlight {
+    animation-name: resreve;
+    animation-duration: 1s;
+    animation-iteration-count: infinite;
+}
+
+@keyframes resreve {
+    0% {
+        background: #d94f1e;
+        border-color: #d94f1e;
+    }
+
+    50% {
+        background: #7ad014;
+        border-color: #7ad014;
+    }
+
+    100% {
+        background: #d94f1e;
+        border-color: #d94f1e;
+    }
+}
+
+.wp-list-table-update-database-msg {
+    margin: 100px;
+}
+
+.wmh-separator {
+    border-bottom: 1px dashed #ccc;
+    margin: 10px 0;
+}

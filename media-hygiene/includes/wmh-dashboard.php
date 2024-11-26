@@ -196,6 +196,9 @@ class wmh_dashboard
     public function fn_wmh_get_count_media()
     {
         $count = wp_count_attachments();
+        if (isset($count->trash)) {
+            unset($count->trash);
+        }
         $count = array_sum(json_decode(json_encode($count), true));
         return $count;
     }
@@ -416,9 +419,9 @@ class wmh_dashboard
     {
 
         if (!current_user_can('manage_options')) {
-			return false;
-		}
-        
+            return false;
+        }
+
         /* default */
         $flg = 0;
         //$msg = __('Something is wrong to update database', MEDIA_HYGIENE);

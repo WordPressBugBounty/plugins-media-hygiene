@@ -153,32 +153,6 @@ $wmh_plugin_db_version_upgrade = get_option('wmh_plugin_db_version_upgrade');
                     </form>
                 </div>
                 <?php if (isset($unused_media_data) && isset($unused_media_data['count_post_id']) && $unused_media_data['count_post_id'] != '0' && $unused_media_data['count_post_id'] != '') { ?>
-                    <!-- Delete media -->
-                    <div class="wmh-delete-page-media">
-                        <form id="wmh-delete-page-media-form">
-                            <input type="hidden" name="action" value="delete_page_media">
-                            <input type="hidden" name="nonce" value="<?php echo esc_attr(wp_create_nonce('delete_page_media_nonce')); ?>">
-                            <input type="hidden" name="paged" value="<?php echo esc_attr($paged); ?>" />
-                            <?php if (isset($wmh_plugin_db_version_upgrade) && $wmh_plugin_db_version_upgrade == '1') { ?>
-                                <button type="submit" id="delete-page-media-button" class="button button-primary wmh-btn button-danger">
-                                    <i class="fa-solid fa-spinner fa-spin delete-page-media-loader" style="display:none;"></i>&nbsp;<?php _e('Delete Media', MEDIA_HYGIENE); ?>
-                                </button>
-                            <?php } else { ?>
-                                <button type="submit" class="button button-primary wmh-btn button-danger update-database-msg-btn">
-                                    <i class="fa-solid fa-spinner fa-spin delete-page-media-loader" style="display:none;"></i>&nbsp;<?php _e('Delete Media', MEDIA_HYGIENE); ?>
-                                </button>
-                            <?php } ?>
-                            <span class="tooltip-1"><i class="fa-solid fa-circle-question"></i>
-                                <span class="right">
-                                    <p>
-                                        <?php _e('Delete media by page only (Free). Get the ONE SHOT delete feature (Pro version)', MEDIA_HYGIENE); ?>
-                                    </p>
-                                    <a href='https://www.mediahygiene.com/pricing/' target='_blank'><?php _e('Upgrade to Pro'); ?></a>
-                                    <i></i>
-                                </span>
-                            </span>
-                        </form>
-                    </div>
                     <!-- Download page media -->
                     <div class="wmh-download-page-media">
                         <form id="create-page-unused-media-zip-form" method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
@@ -198,6 +172,32 @@ $wmh_plugin_db_version_upgrade = get_option('wmh_plugin_db_version_upgrade');
                                 <span class="right">
                                     <p>
                                         <?php _e('Download media by page only (Free). Get the ONE SHOT download feature (Pro version)', MEDIA_HYGIENE); ?>
+                                    </p>
+                                    <a href='https://www.mediahygiene.com/pricing/' target='_blank'><?php _e('Upgrade to Pro'); ?></a>
+                                    <i></i>
+                                </span>
+                            </span>
+                        </form>
+                    </div>
+                    <!-- trash current page media -->
+                    <div class="wmh-trash-page-media">
+                        <form id="wmh-trash-page-media-form">
+                            <input type="hidden" name="action" value="trash_page_media">
+                            <input type="hidden" name="nonce" value="<?php echo esc_attr(wp_create_nonce('trash_page_media_nonce')); ?>">
+                            <input type="hidden" name="paged" value="<?php echo esc_attr($paged); ?>" />
+                            <?php if (isset($wmh_plugin_db_version_upgrade) && $wmh_plugin_db_version_upgrade == '1') { ?>
+                                <button type="submit" id="trash-page-media-button" class="button button-danger wmh-btn">
+                                    <i class="fa-solid fa-spinner fa-spin trash-page-media-loader" style="display:none;"></i>&nbsp;<?php _e('Trash Current Page Media', MEDIA_HYGIENE); ?>
+                                </button>
+                            <?php } else { ?>
+                                <button type="submit" class="button button-danger wmh-btn update-database-msg-btn">
+                                    <i class="fa-solid fa-spinner fa-spin trash-page-media-loader" style="display:none;"></i>&nbsp;<?php _e('Trash Current Page Media', MEDIA_HYGIENE); ?>
+                                </button>
+                            <?php } ?>
+                            <span class="tooltip-1"><i class="fa-solid fa-circle-question"></i>
+                                <span class="right">
+                                    <p>
+                                        <?php _e('Delete media by page only (Free). Get the ONE SHOT delete feature (Pro version)', MEDIA_HYGIENE); ?>
                                     </p>
                                     <a href='https://www.mediahygiene.com/pricing/' target='_blank'><?php _e('Upgrade to Pro'); ?></a>
                                     <i></i>

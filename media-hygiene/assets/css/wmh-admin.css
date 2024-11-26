@@ -1093,6 +1093,28 @@ table#wmh-deleted-media-list {
     background: transparent !important;
 }
 
+.wp-list-table-update-database-msg {
+    margin: 100px;
+}
+
+.wmh-separator {
+    border-bottom: 1px dashed #ccc;
+    margin: 10px 0;
+}
+
+.wmh-bulk-btn {
+    display: flex;
+    column-gap: 15px;
+}
+
+.wmh-bulk-btn button {
+    width: 200px;
+}
+
+.wmh-bulk-progress-bar span {
+    font-size: smaller;
+}
+
 /* update database button hightlight */
 .wmh-update-database-btn-highlight {
     animation-name: resreve;
@@ -1115,13 +1137,4 @@ table#wmh-deleted-media-list {
         background: #d94f1e;
         border-color: #d94f1e;
     }
-}
-
-.wp-list-table-update-database-msg {
-    margin: 100px;
-}
-
-.wmh-separator {
-    border-bottom: 1px dashed #ccc;
-    margin: 10px 0;
 }

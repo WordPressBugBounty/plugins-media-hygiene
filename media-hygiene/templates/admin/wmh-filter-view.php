@@ -8,12 +8,18 @@ if (isset($_GET['page'])) {
     if (isset($_GET['date']) && $_GET['date'] != '') {
         $filter_date = sanitize_text_field($_GET['date']);
     }
-    /* check blacklist or whitelist */
-    if ((isset($_GET['type'])  && sanitize_text_field($_GET['type']) == 'blacklist') || (!isset($_GET['type']))) {
+    /* check blacklist, whitelist, or trash */
+    $type = isset($_GET['type']) ? sanitize_text_field($_GET['type']) : 'blacklist';
+    if ($type === 'blacklist') {
         $list_element = 'blacklist';
-    } else {
+    } elseif ($type === 'whitelist') {
         $list_element = 'whitelist';
+    } elseif ($type === 'trash') {
+        $list_element = 'trash';
+    } else {
+        $list_element = 'blacklist';
     }
+
     /* get attcahment cat */
     $attachment_cat = '';
     if (isset($_GET['attachment_cat']) && $_GET['attachment_cat'] != '') {

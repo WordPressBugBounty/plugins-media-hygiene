@@ -34,14 +34,13 @@ class wmh_general
 	public function fn_add_menu_to_admin()
 	{
 		/* get scan option data. */
-		$default_poisition = "";
+		$default_poisition = '10';
 		$wmh_scan_option_data = get_option('wmh_scan_option_data', true);
 		if (!empty($wmh_scan_option_data)) {
-			if (isset($wmh_scan_option_data['menu_position_input']) && ($wmh_scan_option_data['menu_position_input'] != "" || $wmh_scan_option_data['menu_position_input'] != "0")) {
-				$default_poisition = $wmh_scan_option_data['menu_position_input'];
+			if (isset($wmh_scan_option_data['menu_position_input']) && ($wmh_scan_option_data['menu_position_input'] != "" && $wmh_scan_option_data['menu_position_input'] != "0")) {
+				$default_poisition = (int) $wmh_scan_option_data['menu_position_input'];
 			}
 		}
-
 
 		/* Media Hygiene menu page */
 		$media_hygiene_menu_page = add_menu_page(
@@ -201,12 +200,12 @@ class wmh_general
 
 		/* required messages or string for JS file */
 		$msg_array = array(
-			'warning_1' => esc_html(__('Are you sure you want to delete all unused media in one shot?', MEDIA_HYGIENE)),
+			'warning_1' => esc_html(__('Are you sure you want to trash all unused media in one shot?', MEDIA_HYGIENE)),
 			'warning_2' => esc_html(__('Did you make a backup of your website?', MEDIA_HYGIENE)),
-			'warning_3' => esc_html(__('I agree that I want to delete all unused media files and that I have made a backup of the website.', MEDIA_HYGIENE)),
+			'warning_3' => esc_html(__('I agree that I want to trash all unused media files and that I have made a backup of the website.', MEDIA_HYGIENE)),
 			'msg_1' => esc_html(__('Copied', MEDIA_HYGIENE)),
-			'delete_page_confirm_1' => esc_html(__('Are you sure  you want to delete ALL the unused media on this page?', MEDIA_HYGIENE)),
-			'delete_page_confirm_2' => esc_html(__('I agree that I want to delete ALL the unused media files on this page and that I have made a backup of the website.', MEDIA_HYGIENE)),
+			'trash_page_confirm_1' => esc_html(__('Are you sure  you want to trash ALL the unused media on this page?', MEDIA_HYGIENE)),
+			'trash_page_confirm_2' => esc_html(__('I agree that I want to trash ALL the unused media files on this page and that I have made a backup of the website.', MEDIA_HYGIENE)),
 			'restore_default_file_exe_msg_1' => esc_html(__('Are you sure want to restore default file extensions.', MEDIA_HYGIENE)),
 		);
 

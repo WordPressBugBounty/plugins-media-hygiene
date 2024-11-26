@@ -19,18 +19,34 @@ class wmh_elementor
     }
 
     /* get elementor data function. */
-    public function fn_wmh_get_elementor_data()
+    public function fn_wmh_get_elementor_data($limit, $offset)
     {
-        $elementor_sql = ' SELECT post_id, meta_value FROM ' . $this->wp_postmeta . ' WHERE meta_key = "_elementor_data" ';
-        $elementor_data = $this->conn->get_results($elementor_sql, ARRAY_A);
-        $elementor_result = array();
+        $elementor_data = $this->conn->get_results(
+            $this->conn->prepare(
+                "SELECT p.post_type, pm.post_id, pm.meta_value 
+                FROM {$this->conn->postmeta} pm 
+                JOIN {$this->conn->posts} p 
+                ON p.ID = pm.post_id 
+                WHERE pm.meta_key = %s 
+                AND p.post_type != %s 
+                LIMIT %d OFFSET %d",
+                '_elementor_data',
+                'revision',
+                $limit,
+                $offset
+            ),
+            ARRAY_A
+        );
+
+        $elementor_urls = array();
         if (isset($elementor_data) && !empty($elementor_data)) {
-            foreach ($elementor_data as $ed) {
-                $post_id = $ed['post_id'];
-                $meta_value = $ed['meta_value'];
-                $post_type = get_post_type($post_id);
-                if ($post_type != 'revision') {
-                    array_push($elementor_result, $meta_value);
+            foreach ($elementor_data as $row) {
+                $decoded_data = json_decode($row['meta_value'], true);
+                if (!empty($decoded_data)) {
+                    $elementor_urls = array_merge(
+                        $elementor_urls,
+                        $this->fn_wmh_find_url_from_elementor_responce($decoded_data)
+                    );
                 }
             }
         } else {
@@ -39,6 +55,24 @@ class wmh_elementor
             $wmh_general = new wmh_general();
             $wmh_general->fn_wmh_error_log($module, $error);
         }
-        return $elementor_result;
+
+        return array_values(array_unique($elementor_urls));
+    }
+
+    public function fn_wmh_find_url_from_elementor_responce($array = [])
+    {
+        $urls = [];
+        foreach ($array as $key => $value) {
+            if (is_array($value)) {
+                $urls = array_merge($urls, $this->fn_wmh_find_url_from_elementor_responce($value));
+            } else {
+                if ($key === 'url') {
+                    if ($value && str_contains($value, 'wp-content/uploads')) {
+                        $urls[] = $value;
+                    }
+                }
+            }
+        }
+        return $urls;
     }
 }

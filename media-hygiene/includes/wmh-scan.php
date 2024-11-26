@@ -39,8 +39,11 @@ class wmh_scan
 		add_action('wp_ajax_fetch_data_from_database', array($this, 'fn_wmh_fetch_data_from_database'));
 		/* scanning data */
 		add_action('wp_ajax_scanning_data', array($this, 'fn_wmh_scanning_data'));
-		/* single image delete call from wp list table as row action. */
-		add_action('wp_ajax_delete_single_image_call', array($this, 'fn_wmh_delete_single_image_call'));
+
+		/* trash  */
+		add_action('wp_ajax_row_action_trash', array($this, 'fn_wmh_row_action_trash'));
+
+
 		/* delete attachment. */
 		//add_action('delete_attachment', array($this, 'fn_wmh_delete_attachment_media'));
 		/* whitelist media. */
@@ -49,14 +52,33 @@ class wmh_scan
 		add_action('wp_ajax_blacklist_single_image_call', array($this, 'fn_wmh_blacklist_single_image_call'));
 		/* filter data ajax call */
 		add_action('wp_ajax_filter_data_ajax_call', array($this, 'fn_wmh_filter_data_ajax_call'));
-		/* bulk action delete */
-		add_action('wp_ajax_bulk_action_delete', array($this, 'fn_wmh_bulk_action_delete'));
+		/* bulk action trash */
+		add_action('wp_ajax_bulk_action_trash', array($this, 'fn_wmh_bulk_action_trash'));
 		/* bulk action blacklist to whitelist */
 		add_action('wp_ajax_bulk_action_to_whitelist', array($this, 'fn_wmh_bulk_action_to_whitelist'));
 		/* bulk action whitelist to blacklist */
 		add_action('wp_ajax_bulk_action_to_blacklist', array($this, 'fn_wmh_bulk_action_to_blacklist'));
+
 		/* delete page media */
-		add_action('wp_ajax_delete_page_media', array($this, 'fn_wmh_delete_page_media'));
+		//add_action('wp_ajax_delete_page_media', array($this, 'fn_wmh_delete_page_media'));
+
+		/* trash page media */
+		add_action('wp_ajax_trash_page_media', array($this, 'fn_wmh_trash_page_media'));
+
+		/* bulk action restore for trash */
+		add_action('wp_ajax_bulk_action_trash_to_restore', array($this, 'fn_wmh_bulk_action_trash_to_restore'));
+		/* row action single image restore */
+		add_action('wp_ajax_restore_single_image_call', array($this, 'fn_wmh_restore_single_image_call'));
+		/* bulk restore media from trash */
+		add_action('wp_ajax_wmh_bulk_restore', array($this, 'fn_wmh_bulk_restore'));
+		/* delete permanently single image call */
+		add_action('wp_ajax_delete_permanently_single_image_call', array($this, 'fn_wmh_delete_permanently_single_image_call'));
+		/* bulk action delete */
+		add_action('wp_ajax_bulk_action_delete', array($this, 'fn_wmh_bulk_action_delete'));
+		/* delete permanently */
+		add_action('wp_ajax_wmh_delete_permanently', array($this, 'fn_wmh_delete_permanently'));
+		/* special process - fetch data from elementor */
+		add_action('wp_ajax_fetch_data_from_elementor', array($this, 'fn_wmh_fetch_data_from_elementor'));
 	}
 
 	public function fn_wmh_scan_unused_images()
@@ -187,7 +209,7 @@ class wmh_scan
 		}
 
 		/* get URL list for scan */
-		$urls = get_option('wmh_url_list');
+		$urls = (array) get_option('wmh_url_list');
 		$total_urls = (int) get_option('wmh_url_list_count');
 
 		/* by pagination */
@@ -301,15 +323,12 @@ class wmh_scan
 
 		/* save elemntor data */
 		if ($ajax_call == 5) {
-			$elementor_result = array();
 			if ((array_key_exists('elementor/elementor.php', $all_plugins)) || (array_key_exists('elementor-pro/elementor-pro.php', $all_plugins))) {
-				$wmh_elementor = new wmh_elementor();
-				$elementor_result = $wmh_elementor->fn_wmh_get_elementor_data();
+				$flg = 3;
+			} else {
+				$flg = 1;
+				$progress_bar = 40;
 			}
-			$mh_key = 'wmh_elementor_data';
-			$this->fn_wmh_insert_save_content($elementor_result, $mh_key);
-			$flg = 1;
-			$progress_bar = 40;
 		}
 
 		/*  save Divi theme data */
@@ -607,8 +626,20 @@ class wmh_scan
 
 		/* get elementor data, with post and page content build by elementor including prime slider addons */
 		$mh_key = 'wmh_elementor_data';
-		$json_type = false;
-		$elementor_result =  $this->fn_wmh_get_save_content_data($mh_key, $json_type);
+		$elementor_result = array();
+		$sql = ' SELECT wmh_value FROM ' . $this->wmh_save_scan_content . ' WHERE wmh_key = "' . $mh_key . '" ';
+		$elementor_content = $this->conn->get_results($sql, ARRAY_A);
+		if (!empty($elementor_content)) {
+			foreach ($elementor_content as $ec) {
+				$elementor_result_loop = json_decode($ec['wmh_value'], true);
+				if (!empty($elementor_result_loop)) {
+					foreach ($elementor_result_loop as $erl) {
+						array_push($elementor_result, $erl);
+					}
+				}
+			}
+			$elementor_result = array_unique($elementor_result);
+		}
 
 		/*  get Divi theme data */
 		$mh_key = 'wmh_divi_post_content_data';
@@ -976,6 +1007,7 @@ class wmh_scan
 		if ($ajax_call == $total_ajax_call) {
 			/* truncate temp table data is scan is complete */
 			$this->conn->query(' TRUNCATE TABLE ' . $this->wmh_temp . ' ');
+			$this->conn->query(' TRUNCATE TABLE ' . $this->wmh_save_scan_content . ' ');
 			update_option('wmh_new_update_after_scan', '1.0.3', 'no');
 			/* set status for last scan, it is intruppted or not */
 			update_option('wmh_scan_complete', 'completed', 'no');
@@ -1078,9 +1110,7 @@ class wmh_scan
 		return array_unique($page_post_thumbnail_ids);
 	}
 
-
-	/* delete single image from row action */
-	public function fn_wmh_delete_single_image_call()
+	public function fn_wmh_row_action_trash()
 	{
 		if (!current_user_can('manage_options')) {
 			return false;
@@ -1088,52 +1118,31 @@ class wmh_scan
 
 		$wp_nonce = isset($_POST["nonce"]) ? sanitize_text_field($_POST["nonce"]) : '';
 		if (!wp_verify_nonce($wp_nonce, "media_hygiene_nonce")) {
-			die(__("Security check. Hacking not allowed", MEDIA_HYGIENE));
+			die(__("Security check. Hacking not allowed", MEDIA_HYGIENE_PRO));
 		}
 
-		if (isset($_POST['action']) && sanitize_text_field($_POST['action']) == 'delete_single_image_call') {
-
-			/* post id */
+		if (isset($_POST['action']) && sanitize_text_field($_POST['action']) == 'row_action_trash') {
 			$post_id = sanitize_text_field($_POST['post_id']);
-
-			/* media size */
 			$media_size = sanitize_text_field($_POST['file_size']);
-
-			/* post mime type */
-			$post_mime_type = get_post_mime_type($post_id);
-
-			/* insert data to deleted media */
-			$this->fn_wmh_inset_into_deleted_media_list($post_id, $post_mime_type);
-
-			/* delet from media */
-			$deleted_from_media_posts = wp_delete_attachment($post_id, true);
-
-			if ($deleted_from_media_posts) {
-
+			$trashed_from_media_posts = wp_trash_post($post_id);
+			if ($trashed_from_media_posts) {
 				$this->conn->delete($this->wmh_unused_media_post_id, array('post_id' => $post_id));
-
-				/* update statistics data */
-				$delete_image_count = 1;
-
-				/* update statistics data */
 				$update_statistics_array = array(
-					'call' => 'single_delete',
-					'count' => $delete_image_count,
+					'call' => 'single_trash',
+					'count' => 1,
 					'size' => $media_size
 				);
 				$this->fn_wmh_update_statistics_data_on_delete($update_statistics_array);
-
 				$flg = 1;
-				$message = esc_html(__('File deleted successfully.', MEDIA_HYGIENE));
+				$message = esc_html(__('File trashed successfully.', MEDIA_HYGIENE));
 				$output = array(
 					'flg' => $flg,
 					'message' => $message
 				);
 				echo json_encode($output);
 			} else {
-
 				$flg = 0;
-				$message = esc_html(__('There is an error to delete media.', MEDIA_HYGIENE));
+				$message = esc_html(__('There is an error for trash media.', MEDIA_HYGIENE));
 				$output = array(
 					'flg' => $flg,
 					'message' => $message
@@ -1144,7 +1153,7 @@ class wmh_scan
 		wp_die();
 	}
 
-	public function fn_wmh_inset_into_deleted_media_list($post_id = '', $post_mime_type = '')
+	public function fn_wmh_insert_into_deleted_media_list($post_id = '', $post_mime_type = '')
 	{
 		if (str_contains($post_mime_type, 'image')) {
 			$guid = wp_get_original_image_url($post_id);
@@ -1161,85 +1170,69 @@ class wmh_scan
 		$this->conn->insert($this->wmh_deleted_media, $insert_array);
 	}
 
-	public function fn_wmh_delete_page_media()
+	public function fn_wmh_trash_page_media()
 	{
+
 		if (!current_user_can('manage_options')) {
 			return false;
 		}
 
 		/* check nonce here. */
 		$wp_nonce = sanitize_text_field($_POST['nonce']);
-		if (!wp_verify_nonce($wp_nonce, 'delete_page_media_nonce')) {
+		if (!wp_verify_nonce($wp_nonce, 'trash_page_media_nonce')) {
 			die(esc_html(__('Security check. Hacking not allowed', MEDIA_HYGIENE)));
 		}
 
 		/* default */
 		$flg = 0;
-		$message = esc_html(__('Something is wrong to delete page media', MEDIA_HYGIENE));
+		$message = esc_html(__('Something is wrong to trash page media', MEDIA_HYGIENE));
 
-		/* get scan option data. */
 		$wmh_scan_option_data = get_option('wmh_scan_option_data', true);
-
 		$media_per_page_input = 10;
 		if (isset($wmh_scan_option_data['media_per_page_input']) && ($wmh_scan_option_data['media_per_page_input'] != '' || $wmh_scan_option_data['media_per_page_input'] != 0)) {
 			$media_per_page_input = $wmh_scan_option_data['media_per_page_input'];
 		}
 
+		/* temp code */
 		$per_post =  $media_per_page_input;
 		$paged = sanitize_text_field($_POST['paged']);
 		$offset = $per_post * ($paged - 1);
-		$deleted_post_id_sql = ' SELECT post_id, size FROM ' . $this->wmh_unused_media_post_id . ' LIMIT ' . $per_post . ' OFFSET ' . $offset . '';
-		$deleted_post_id_results = $this->conn->get_results($deleted_post_id_sql,  ARRAY_A);
-		$deleted_display_size = array();
-
-		if (isset($deleted_post_id_results) && !empty($deleted_post_id_results)) {
-
-			foreach ($deleted_post_id_results as $id) {
-
-				/* post mime type */
-				$post_mime_type = sanitize_mime_type(get_post_mime_type($id));
-
-				/* attachment id */
+		$trashed_post_id_sql = ' SELECT post_id, size FROM ' . $this->wmh_unused_media_post_id . ' LIMIT ' . $per_post . ' OFFSET ' . $offset . '';
+		$trashed_post_id_results = $this->conn->get_results($trashed_post_id_sql,  ARRAY_A);
+		$trashed_display_size = array();
+		if (isset($trashed_post_id_results) && !empty($trashed_post_id_results)) {
+			foreach ($trashed_post_id_results as $id) {
 				$post_id = $id['post_id'];
-
-				/* insert data to deleted media */
-				$this->fn_wmh_inset_into_deleted_media_list($post_id, $post_mime_type);
-
-				/* size */
-				array_push($deleted_display_size, $id['size']);
-
-				/* delete from media */
-				$deleted_from_media_posts = wp_delete_attachment($post_id, true);
-
-				if ($deleted_from_media_posts) {
-					/* delete from custom table that we created 'wmh_unused_media_post_id' */
+				array_push($trashed_display_size, $id['size']);
+				$trashed_from_media_posts = wp_trash_post($post_id);
+				if ($trashed_from_media_posts) {
 					$this->conn->delete($this->wmh_unused_media_post_id, array('post_id' => $post_id));
 				} else {
-					$module = 'Scan delete page media';
-					$error = 'Attachment not deleted for delete page media';
+					$module = 'Scan trash page media';
+					$error = 'Attachment not trashed for trash page media';
 					$wmh_general = new wmh_general();
 					$wmh_general->fn_wmh_error_log($module, $error);
 				}
 			}
-			if (isset($deleted_display_size) && !empty($deleted_display_size)) {
-				$deleted_display_size_count = count($deleted_post_id_results);
+			if (isset($trashed_display_size) && !empty($trashed_display_size)) {
+				$trashed_display_size_count = count($trashed_post_id_results);
 				/* update statistics data */
 				$update_statistics_array = array(
-					'call' => 'page_delete',
-					'count' => (int) $deleted_display_size_count,
-					'size' => array_sum($deleted_display_size)
+					'call' => 'page_trash',
+					'count' => (int) $trashed_display_size_count,
+					'size' => array_sum($trashed_display_size)
 				);
 				$this->fn_wmh_update_statistics_data_on_delete($update_statistics_array);
-				$deleted_display_size = size_format(array_sum($deleted_display_size));
+				$trashed_display_size = size_format(array_sum($trashed_display_size));
 				$flg = 1;
-				$message = esc_html(__('Total images deleted: ' . $deleted_display_size_count . ', Free up space: ' . $deleted_display_size . '', MEDIA_HYGIENE));
+				$message = esc_html(__('Total images trashed: ' . $trashed_display_size_count . ', Free up space: ' . $trashed_display_size . '', MEDIA_HYGIENE));
 			} else {
 				$flg = 0;
 				$message = esc_html(__('Something is wrong to calcualte size', MEDIA_HYGIENE));
 			}
 		} else {
 			$flg = 0;
-			$message = esc_html(__('There is no unused media to delete.', MEDIA_HYGIENE));
+			$message = esc_html(__('There is no unused media to trash.', MEDIA_HYGIENE));
 		}
 		$output = array(
 			'flg' => $flg,
@@ -1400,11 +1393,15 @@ class wmh_scan
 	public function fn_wmh_filter_data_ajax_call()
 	{
 		$list_element = '';
+
 		if (sanitize_text_field($_POST['list_element']) == 'blacklist') {
 			$list_element = '&type=blacklist';
 		} else if (sanitize_text_field($_POST['list_element']) == 'whitelist') {
 			$list_element = '&type=whitelist';
+		} else if (sanitize_text_field($_POST['list_element']) == 'trash') {
+			$list_element = '&type=trash';
 		}
+
 
 		if ($_POST['attachment_cat'] != '' && $_POST['date'] != '') {
 
@@ -1448,8 +1445,7 @@ class wmh_scan
 		wp_die();
 	}
 
-
-	public function fn_wmh_bulk_action_delete()
+	public function fn_wmh_bulk_action_trash()
 	{
 		if (!current_user_can('manage_options')) {
 			return false;
@@ -1460,73 +1456,47 @@ class wmh_scan
 			die(__("Security check. Hacking not allowed", MEDIA_HYGIENE));
 		}
 
-		$deleted_display_size = array();
+		$trashed_display_size = array();
 
 		/* deafult flg */
 		$flg = 0;
-		$message = __('Something is wrong to delete media', MEDIA_HYGIENE);
+		$message = __('Something is wrong to trash media', MEDIA_HYGIENE);
 
-		if (isset($_POST['action']) && sanitize_text_field($_POST['action']) == 'bulk_action_delete') {
-
-			if (isset($_POST['bulk_action_val']) && sanitize_text_field($_POST['bulk_action_val']) == 'delete') {
-
+		if (isset($_POST['action']) && sanitize_text_field($_POST['action']) == 'bulk_action_trash') {
+			if (isset($_POST['bulk_action_val']) && sanitize_text_field($_POST['bulk_action_val']) == 'trash') {
 				if (isset($_POST['chek_box_val']) && !empty($_POST['chek_box_val'])) {
-
-					/* check box value */
 					$chek_box_val = rest_sanitize_array($_POST['chek_box_val']);
-
-					/* size */
 					$size_array = [];
 					$size_array = rest_sanitize_array($_POST['size']);
-
 					foreach ($chek_box_val as $d_id) {
-
-						/* attachment id */
-						$attachment_id = $d_id;
-
-						/* post mime type */
-						$post_mime_type = sanitize_mime_type(get_post_mime_type($attachment_id));
-
-						/* insert data to deleted media */
-						$this->fn_wmh_inset_into_deleted_media_list($attachment_id, $post_mime_type);
-
-						/* delete from media. */
-						$deleted_from_media_posts = wp_delete_attachment($d_id, true);
-
-						if ($deleted_from_media_posts) {
-
-							/* delete from custom table that we created 'wmh_unused_media_post_id'. */
+						$trashed_from_media_posts = wp_trash_post($d_id);
+						if ($trashed_from_media_posts) {
 							$this->conn->delete($this->wmh_unused_media_post_id, array('post_id' => $d_id));
 						} else {
-							$module = 'Scan delete bulk action';
-							$error = 'Attachment not deleted for bulk action delete';
+							$module = 'Scan trash bulk action';
+							$error = 'Attachment not trashed for bulk action trash';
 							$wmh_general = new wmh_general();
 							$wmh_general->fn_wmh_error_log($module, $error);
 						}
 					}
-
-					/* count media */
-					$deleted_display_size_count = count($chek_box_val);
-
-					/* update statistics data */
+					$trashed_display_size_count = count($chek_box_val);
 					$update_statistics_array = array(
-						'call' => 'bulk_delete',
-						'count' => (int) $deleted_display_size_count,
+						'call' => 'bulk_trash',
+						'count' => (int) $trashed_display_size_count,
 						'size' => array_sum($size_array)
 					);
 					$this->fn_wmh_update_statistics_data_on_delete($update_statistics_array);
-
-					$deleted_display_size = size_format(array_sum($size_array));
+					$trashed_display_size = size_format(array_sum($size_array));
 					$flg = 1;
-					$message = esc_html(__('Total images deleted: ' . $deleted_display_size_count . ', Free up space: ' . $deleted_display_size . '', MEDIA_HYGIENE));
+					$message = esc_html(__('Total images trashed: ' . $trashed_display_size_count . ', Free up space: ' . $trashed_display_size . '', MEDIA_HYGIENE));
 				}
 			}
 		}
-		$bulk_delete_message_array = array(
+		$bulk_trash_message_array = array(
 			'flg' => $flg,
 			'message' => $message
 		);
-		echo json_encode($bulk_delete_message_array);
+		echo json_encode($bulk_trash_message_array);
 		wp_die();
 	}
 
@@ -1541,7 +1511,7 @@ class wmh_scan
 
 		//$call == 'attachment_delete_unused';
 
-		if ($call == 'single_delete' || $call == 'bulk_delete' || $call == 'page_delete') {
+		if ($call == 'single_trash' || $call == 'bulk_trash' || $call == 'page_trash') {
 
 			/* get all option for statistics data */
 			$wmh_media_count = (int) get_option('wmh_media_count');
@@ -1611,6 +1581,40 @@ class wmh_scan
 			$update_wmh_use_media_size = $wmh_use_media_size - $size;
 			update_option('wmh_use_media_count', $update_wmh_use_media_count, 'no');
 			update_option('wmh_use_media_size', $update_wmh_use_media_size, 'no');
+			$media_type_info = $wmh_dashboard->fn_wmh_media_type_info();
+			$media_breakdown = $wmh_dashboard->fn_wmh_get_media_breakdown();
+			/* media type info */
+			update_option('wmh_media_type_info', $media_type_info, 'no');
+			/* media breakdown */
+			update_option('wmh_media_breakdown', $media_breakdown, 'no');
+		}
+	}
+
+	public function fn_wmh_update_statistics_data_on_restore($update_statistics_array = array())
+	{
+
+
+		$call = $update_statistics_array['call'];
+		$count = (int) $update_statistics_array['count'];
+		$size = $update_statistics_array['size'];
+
+		/* make dashboard class */
+		$wmh_dashboard = new wmh_dashboard();
+
+		if ($call == 'bulk_restore' || $call == 'single_restore') {
+			/* get all option for statistics data */
+			$wmh_media_count = (int) get_option('wmh_media_count');
+			$wmh_total_media_size = (int) get_option('wmh_total_media_size');
+			$wmh_total_unused_media_count = (int) get_option('wmh_total_unused_media_count');
+			$wmh_unused_media_size = (int) get_option('wmh_unused_media_size');
+			$update_wmh_media_count = $wmh_media_count + $count;
+			$update_wmh_total_media_size = $wmh_total_media_size + $size;
+			$update_wmh_total_unused_media_count = $wmh_total_unused_media_count + $count;
+			$update_wmh_unused_media_size = $wmh_unused_media_size + $size;
+			update_option('wmh_media_count', $update_wmh_media_count, 'no');
+			update_option('wmh_total_media_size', $update_wmh_total_media_size, 'no');
+			update_option('wmh_total_unused_media_count', $update_wmh_total_unused_media_count, 'no');
+			update_option('wmh_unused_media_size', $update_wmh_unused_media_size, 'no');
 			$media_type_info = $wmh_dashboard->fn_wmh_media_type_info();
 			$media_breakdown = $wmh_dashboard->fn_wmh_get_media_breakdown();
 			/* media type info */
@@ -1765,6 +1769,563 @@ class wmh_scan
 			array_push($media_size_array, $attachment_filesize);
 		}
 		return $media_size_array;
+	}
+
+	public function fn_wmh_bulk_action_trash_to_restore()
+	{
+		if (!current_user_can('manage_options')) {
+			return false;
+		}
+
+		$wp_nonce = isset($_POST["nonce"]) ? sanitize_text_field($_POST["nonce"]) : '';
+		if (!wp_verify_nonce($wp_nonce, "media_hygiene_nonce")) {
+			die(__("Security check. Hacking not allowed", MEDIA_HYGIENE));
+		}
+
+		$flg = 0;
+		$message = __('Something is wrong to restore media', MEDIA_HYGIENE);
+
+		$chek_box_val = [];
+		if (isset($_POST['action']) && sanitize_text_field($_POST['action']) == 'bulk_action_trash_to_restore') {
+			if (isset($_POST['bulk_action_val']) && sanitize_text_field($_POST['bulk_action_val']) == 'restore') {
+				$chek_box_val = rest_sanitize_array($_POST['chek_box_val']);
+			}
+		}
+
+		if (!empty($chek_box_val)) {
+			$size_array = [];
+			$size_array = rest_sanitize_array($_POST['size']);
+			foreach ($chek_box_val as $a_id) {
+				$media_size_array = [];
+				/* post mime type */
+				$post_mime_type = sanitize_mime_type(get_post_mime_type($a_id));
+				/* post cat */
+				$post_cat = 'others';
+				if (str_contains($post_mime_type, 'image')) {
+					$post_cat = 'images';
+				} else if (str_contains($post_mime_type, 'application')) {
+					$post_cat = 'documents';
+				} else if (str_contains($post_mime_type, 'video')) {
+					$post_cat =  'video';
+				} else if (str_contains($post_mime_type, 'audio')) {
+					$post_cat = 'audio';
+				} else {
+					$post_cat = 'others';
+				}
+				/* post date */
+				$post_date = get_the_date('Y-m-d H:i:s', $a_id);
+				/* calculate size */
+				$post_size = array_sum($this->fn_wmh_calculate_size($a_id, $post_mime_type, $media_size_array));
+				/* media ext */
+				$media_ext = '';
+				if (str_contains($post_mime_type, 'image')) {
+					$guid_url_for_ext = wp_get_original_image_url($a_id);
+				} else {
+					$guid_url_for_ext = wp_get_attachment_url($a_id);
+				}
+				$media_type_ext = wp_check_filetype($guid_url_for_ext);
+				if (isset($media_type_ext['ext'])) {
+					if ($media_type_ext['ext'] != '') {
+						$media_ext = $media_type_ext['ext'];
+					}
+				}
+				if (get_post_status($a_id) === 'trash') {
+					if (wp_untrash_post($a_id)) {
+						$insert_array = array(
+							'id' => '',
+							'post_id' => $a_id,
+							'attachment_cat' => $post_cat,
+							'ext' => $media_ext,
+							'post_date' => $post_date,
+							'size' => $post_size,
+							'date_created' => date('Y-m-d H:i:s'),
+							'date_updated' => date('Y-m-d H:i:s')
+						);
+						$restored = $this->conn->insert($this->wmh_unused_media_post_id, $insert_array);
+					}
+				}
+			}
+			if ($restored) {
+
+				/* update statistics data */
+				$update_statistics_array = array(
+					'call' => 'bulk_restore',
+					'count' => (int) count($chek_box_val),
+					'size' => array_sum($size_array)
+				);
+				$this->fn_wmh_update_statistics_data_on_restore($update_statistics_array);
+
+				$flg = 1;
+				$message = __('Media Restored.', MEDIA_HYGIENE);
+			} else {
+				$flg = 0;
+				$message = __('Something is wrong to restore media', MEDIA_HYGIENE);
+			}
+		} else {
+			$flg = 0;
+			$message = __('Please, select media by checkbox to restore');
+		}
+		$output = [
+			'flg' => $flg,
+			'message' => $message
+		];
+		echo json_encode($output);
+		wp_die();
+	}
+
+	public function fn_wmh_restore_single_image_call()
+	{
+
+		if (!current_user_can('manage_options')) {
+			return false;
+		}
+
+		$wp_nonce = isset($_POST["nonce"]) ? sanitize_text_field($_POST["nonce"]) : '';
+		if (!wp_verify_nonce($wp_nonce, "media_hygiene_nonce")) {
+			die(__("Security check. Hacking not allowed", MEDIA_HYGIENE));
+		}
+
+		$flg = 0;
+		$message = __('Something is wrong to restore media', MEDIA_HYGIENE);
+
+		$post_id = isset($_POST['post_id']) ? sanitize_text_field($_POST['post_id']) : 0;
+		$file_size = isset($_POST['file_size']) ? sanitize_text_field($_POST['file_size']) : 0;
+
+		$media_size_array = [];
+		/* post mime type */
+		$post_mime_type = sanitize_mime_type(get_post_mime_type($post_id));
+		/* post cat */
+		$post_cat = 'others';
+		if (str_contains($post_mime_type, 'image')) {
+			$post_cat = 'images';
+		} else if (str_contains($post_mime_type, 'application')) {
+			$post_cat = 'documents';
+		} else if (str_contains($post_mime_type, 'video')) {
+			$post_cat =  'video';
+		} else if (str_contains($post_mime_type, 'audio')) {
+			$post_cat = 'audio';
+		} else {
+			$post_cat = 'others';
+		}
+		/* post date */
+		$post_date = get_the_date('Y-m-d H:i:s', $post_id);
+		/* calculate size */
+		$post_size = array_sum($this->fn_wmh_calculate_size($post_id, $post_mime_type, $media_size_array));
+		/* media ext */
+		$media_ext = '';
+		if (str_contains($post_mime_type, 'image')) {
+			$guid_url_for_ext = wp_get_original_image_url($post_id);
+		} else {
+			$guid_url_for_ext = wp_get_attachment_url($post_id);
+		}
+		$media_type_ext = wp_check_filetype($guid_url_for_ext);
+		if (isset($media_type_ext['ext'])) {
+			if ($media_type_ext['ext'] != '') {
+				$media_ext = $media_type_ext['ext'];
+			}
+		}
+		if (get_post_status($post_id) === 'trash') {
+			if (wp_untrash_post($post_id)) {
+				$insert_array = array(
+					'id' => '',
+					'post_id' => $post_id,
+					'attachment_cat' => $post_cat,
+					'ext' => $media_ext,
+					'post_date' => $post_date,
+					'size' => $post_size,
+					'date_created' => date('Y-m-d H:i:s'),
+					'date_updated' => date('Y-m-d H:i:s')
+				);
+				$restored = $this->conn->insert($this->wmh_unused_media_post_id, $insert_array);
+				if ($restored) {
+					/* update statistics data */
+					$update_statistics_array = array(
+						'call' => 'single_restore',
+						'count' => 1,
+						'size' => $file_size
+					);
+					$this->fn_wmh_update_statistics_data_on_restore($update_statistics_array);
+					$flg = 1;
+					$message = __('Media Restored.', MEDIA_HYGIENE);
+				} else {
+					$flg = 0;
+					$message = __('Something is wrong to restore media', MEDIA_HYGIENE);
+				}
+			}
+		}
+		$output = [
+			'flg' => $flg,
+			'message' => $message
+		];
+		echo json_encode($output);
+		wp_die();
+	}
+
+	public function fn_wmh_bulk_restore()
+	{
+		if (!current_user_can('manage_options')) {
+			return false;
+		}
+
+		$wp_nonce = isset($_POST["nonce"]) ? sanitize_text_field($_POST["nonce"]) : '';
+		if (!wp_verify_nonce($wp_nonce, "wmh_bulk_restore")) {
+			die(__("Security check. Hacking not allowed", MEDIA_HYGIENE));
+		}
+
+		$ajax_call = (int) sanitize_text_field($_POST['ajax_call']);
+
+		if ($ajax_call == 0) {
+			$trash_media_count = wp_count_attachments()->trash;
+			if ($trash_media_count) {
+				update_option('wmh_bulk_restore_total_trash_media', $trash_media_count);
+				$ajax_call++;
+				echo json_encode(['flg' => 1, 'ajax_call' => $ajax_call, 'message' => __('Pending ...', MEDIA_HYGIENE), 'progress_bar' => 0]);
+				wp_die();
+			} else {
+				echo json_encode([
+					'flg' => 0,
+					'message' => __('There are currently no media items in the trash.', MEDIA_HYGIENE),
+					'progress_bar' => 0
+				]);
+				wp_die();
+			}
+		}
+
+		$per_post = 25;
+		$posts_count = (int) get_option('wmh_bulk_restore_total_trash_media');
+		$total_ajax_call = (int) ceil($posts_count / $per_post);
+		$progress_bar = min((($ajax_call / $total_ajax_call) * 100), 100);
+		$progress_bar = number_format($progress_bar, 2);
+
+		$post_ids = get_posts([
+			'post_type'      => 'attachment',
+			'post_status' => 'trash',
+			'posts_per_page' => $per_post,
+			'fields'         => 'ids'
+		]);
+
+		if (!empty($post_ids)) {
+			foreach ($post_ids as $a_id) {
+				$media_size_array = [];
+				/* post mime type */
+				$post_mime_type = sanitize_mime_type(get_post_mime_type($a_id));
+				/* post cat */
+				$post_cat = 'others';
+				if (str_contains($post_mime_type, 'image')) {
+					$post_cat = 'images';
+				} else if (str_contains($post_mime_type, 'application')) {
+					$post_cat = 'documents';
+				} else if (str_contains($post_mime_type, 'video')) {
+					$post_cat =  'video';
+				} else if (str_contains($post_mime_type, 'audio')) {
+					$post_cat = 'audio';
+				} else {
+					$post_cat = 'others';
+				}
+				/* post date */
+				$post_date = get_the_date('Y-m-d H:i:s', $a_id);
+				/* calculate size */
+				$post_size = array_sum($this->fn_wmh_calculate_size($a_id, $post_mime_type, $media_size_array));
+				/* media ext */
+				$media_ext = '';
+				if (str_contains($post_mime_type, 'image')) {
+					$guid_url_for_ext = wp_get_original_image_url($a_id);
+				} else {
+					$guid_url_for_ext = wp_get_attachment_url($a_id);
+				}
+				$media_type_ext = wp_check_filetype($guid_url_for_ext);
+				if (isset($media_type_ext['ext'])) {
+					if ($media_type_ext['ext'] != '') {
+						$media_ext = $media_type_ext['ext'];
+					}
+				}
+				if (wp_untrash_post($a_id)) {
+					$insert_array = array(
+						'id' => '',
+						'post_id' => $a_id,
+						'attachment_cat' => $post_cat,
+						'ext' => $media_ext,
+						'post_date' => $post_date,
+						'size' => $post_size,
+						'date_created' => date('Y-m-d H:i:s'),
+						'date_updated' => date('Y-m-d H:i:s')
+					);
+					$this->conn->insert($this->wmh_unused_media_post_id, $insert_array);
+				}
+			}
+		}
+
+		if ($ajax_call == $total_ajax_call) {
+			delete_option('wmh_bulk_restore_total_trash_media');
+			$flg = 2;
+			$message = __('Media restored successfully. Please note that it may take some time to update the dashboard statistics after you click "OK".', MEDIA_HYGIENE);
+		} else {
+			$ajax_call++;
+			$flg = 1;
+			$message = __('Pending ...', MEDIA_HYGIENE);
+		}
+
+		$output = [
+			'flg' => $flg,
+			'ajax_call' => $ajax_call,
+			'message' => $message,
+			'total_ajax_call' => $total_ajax_call,
+			'progress_bar' => $progress_bar
+		];
+		echo json_encode($output);
+		wp_die();
+	}
+
+	public function fn_wmh_delete_permanently_single_image_call()
+	{
+		if (!current_user_can('manage_options')) {
+			return false;
+		}
+
+		$wp_nonce = isset($_POST["nonce"]) ? sanitize_text_field($_POST["nonce"]) : '';
+		if (!wp_verify_nonce($wp_nonce, "media_hygiene_nonce")) {
+			die(__("Security check. Hacking not allowed", MEDIA_HYGIENE));
+		}
+
+		$flg = 0;
+		$message = __('Something is wrong to delete media', MEDIA_HYGIENE);
+
+		/* post id */
+		$post_id = isset($_POST['post_id']) ? sanitize_text_field($_POST['post_id']) : 0;
+		/* media size */
+		//$file_size = isset($_POST['file_size']) ? sanitize_text_field($_POST['file_size']) : 0;
+		/* post mime type */
+		$post_mime_type = get_post_mime_type($post_id);
+		/* insert data to trash media */
+		$this->fn_wmh_insert_into_deleted_media_list($post_id, $post_mime_type);
+		/* delet from media */
+		$deleted_from_media_posts = wp_delete_attachment($post_id, true);
+		if ($deleted_from_media_posts) {
+			$this->conn->delete($this->wmh_unused_media_post_id, array('post_id' => $post_id));
+			/* update statistics data */
+			//$delete_image_count = 1;
+			/* update statistics data */
+			// $update_statistics_array = array(
+			// 	'call' => 'single_delete',
+			// 	'count' => $delete_image_count,
+			// 	'size' => $file_size
+			// );
+			//$this->fn_wmh_update_statistics_data_on_delete($update_statistics_array);
+			$flg = 1;
+			$message = esc_html(__('File deleted successfully.', MEDIA_HYGIENE));
+			$output = array(
+				'flg' => $flg,
+				'message' => $message
+			);
+			echo json_encode($output);
+		} else {
+
+			$flg = 0;
+			$message = esc_html(__('There is an error for delete media.', MEDIA_HYGIENE));
+			$output = array(
+				'flg' => $flg,
+				'message' => $message
+			);
+			echo json_encode($output);
+		}
+		wp_die();
+	}
+
+	public function fn_wmh_bulk_action_delete()
+	{
+		if (!current_user_can('manage_options')) {
+			return false;
+		}
+
+		$wp_nonce = isset($_POST["nonce"]) ? sanitize_text_field($_POST["nonce"]) : '';
+		if (!wp_verify_nonce($wp_nonce, "media_hygiene_nonce")) {
+			die(__("Security check. Hacking not allowed", MEDIA_HYGIENE));
+		}
+
+		$deleted_display_size = array();
+
+		/* deafult flg */
+		$flg = 0;
+		$message = __('Something is wrong to trash media', MEDIA_HYGIENE);
+
+		if (isset($_POST['bulk_action_val']) && sanitize_text_field($_POST['bulk_action_val']) == 'delete') {
+			if (isset($_POST['chek_box_val']) && !empty($_POST['chek_box_val'])) {
+				/* check box value */
+				$chek_box_val = rest_sanitize_array($_POST['chek_box_val']);
+				/* size */
+				$size_array = [];
+				$size_array = rest_sanitize_array($_POST['size']);
+				foreach ($chek_box_val as $d_id) {
+					/* attachment id */
+					$attachment_id = $d_id;
+					/* post mime type */
+					$post_mime_type = sanitize_mime_type(get_post_mime_type($attachment_id));
+					/* insert data to deleted media */
+					$this->fn_wmh_insert_into_deleted_media_list($attachment_id, $post_mime_type);
+					/* delete from media. */
+					$deleted_from_media_posts = wp_delete_attachment($d_id, true);
+					if ($deleted_from_media_posts) {
+						/* delete from custom table that we created 'wmh_unused_media_post_id'. */
+						$this->conn->delete($this->wmh_unused_media_post_id, array('post_id' => $d_id));
+					} else {
+						$module = 'Scan delete bulk action';
+						$error = 'Attachment not deleted for bulk action delete';
+						$wmh_general = new wmh_general();
+						$wmh_general->fn_wmh_error_log($module, $error);
+					}
+				}
+				/* count media */
+				$deleted_display_size_count = count($chek_box_val);
+				/* update statistics data */
+				// $update_statistics_array = array(
+				// 	'call' => 'bulk_delete',
+				// 	'count' => (int) $deleted_display_size_count,
+				// 	'size' => array_sum($size_array)
+				// );
+				// $this->fn_wmh_update_statistics_data_on_delete($update_statistics_array);
+				$deleted_display_size = size_format(array_sum($size_array));
+				$flg = 1;
+				$message = esc_html(__('Total images trashed: ' . $deleted_display_size_count . ', Free up space: ' . $deleted_display_size . '', MEDIA_HYGIENE));
+			}
+		}
+
+		$bulk_delete_message_array = array(
+			'flg' => $flg,
+			'message' => $message
+		);
+		echo json_encode($bulk_delete_message_array);
+		wp_die();
+	}
+
+	public function fn_wmh_delete_permanently()
+	{
+
+		if (!current_user_can('manage_options')) {
+			return false;
+		}
+
+		$wp_nonce = isset($_POST["nonce"]) ? sanitize_text_field($_POST["nonce"]) : '';
+		if (!wp_verify_nonce($wp_nonce, "wmh_delete_permanently")) {
+			die(__("Security check. Hacking not allowed", MEDIA_HYGIENE));
+		}
+
+		$ajax_call = (int) sanitize_text_field($_POST['ajax_call']);
+
+		if ($ajax_call == 0) {
+			$trash_media_count = wp_count_attachments()->trash;
+			if ($trash_media_count) {
+				update_option('wmh_bulk_delete_permanently_total_trash_media', $trash_media_count);
+				$ajax_call++;
+				echo json_encode(['flg' => 1, 'ajax_call' => $ajax_call, 'message' => __('Pending ...', MEDIA_HYGIENE), 'progress_bar' => 0]);
+				wp_die();
+			} else {
+				echo json_encode([
+					'flg' => 0,
+					'message' => __('There are currently no media items in the trash.', MEDIA_HYGIENE),
+					'progress_bar' => 0
+				]);
+				wp_die();
+			}
+		}
+
+		$per_post = 25;
+		$posts_count = (int) get_option('wmh_bulk_delete_permanently_total_trash_media');
+		$total_ajax_call = (int) ceil($posts_count / $per_post);
+		$progress_bar = min((($ajax_call / $total_ajax_call) * 100), 100);
+		$progress_bar = number_format($progress_bar, 2);
+
+		$post_ids = get_posts([
+			'post_type'      => 'attachment',
+			'post_status' => 'trash',
+			'posts_per_page' => $per_post,
+			'fields'         => 'ids'
+		]);
+
+		if (!empty($post_ids)) {
+			foreach ($post_ids as $a_id) {
+				$deleted_from_media_posts = wp_delete_attachment($a_id, true);
+				if ($deleted_from_media_posts) {
+					$this->conn->delete($this->wmh_unused_media_post_id, array('post_id' => $a_id));
+				}
+			}
+		}
+
+		if ($ajax_call == $total_ajax_call) {
+			delete_option('wmh_bulk_delete_permanently_total_trash_media');
+			$flg = 2;
+			$message = __('Media deleted successfully. Please note that it may take some time to update the dashboard statistics after you click "OK".', MEDIA_HYGIENE);
+		} else {
+			$ajax_call++;
+			$flg = 1;
+			$message = __('Pending ...', MEDIA_HYGIENE);
+		}
+
+		$output = [
+			'flg' => $flg,
+			'ajax_call' => $ajax_call,
+			'message' => $message,
+			'total_ajax_call' => $total_ajax_call,
+			'progress_bar' => $progress_bar
+		];
+		echo json_encode($output);
+		wp_die();
+	}
+
+	public function fn_wmh_fetch_data_from_elementor()
+	{
+		$all_plugins = get_plugins();
+		$ajax_call = (int) sanitize_text_field($_POST['ajax_call']);
+		$progress_bar = sanitize_text_field($_POST['progress_bar']);
+		if ($ajax_call == 0) {
+			$elementor_count = (int) $this->conn->get_var(
+				$this->conn->prepare(
+					"SELECT COUNT(DISTINCT pm.post_id) 
+					FROM {$this->conn->postmeta} pm 
+					JOIN {$this->conn->posts} p ON p.ID = pm.post_id 
+					WHERE pm.meta_key = %s 
+					AND p.post_type != %s",
+					'_elementor_data',
+					'revision'
+				)
+			);
+			if ($elementor_count > 0) {
+				update_option('wmh_total_elementor_call', $elementor_count);
+				$ajax_call++;
+				$flg = 1;
+			} else {
+				$flg = 0;
+			}
+			echo json_encode(['flg' => $flg, 'ajax_call' => $ajax_call, 'progress_bar_width' => $progress_bar]);
+			wp_die();
+		}
+		$per_post = 50;
+		$offset = ($ajax_call - 1) * $per_post;
+		$total_elementor_count = (int) get_option('wmh_total_elementor_call');
+		$total_ajax_call = ceil(($total_elementor_count / $per_post));
+		$percentage = (3.57 / $total_ajax_call);
+		$progress_bar_width = number_format(($progress_bar + $percentage), 2);
+		$elementor_result = array();
+		if ((array_key_exists('elementor/elementor.php', $all_plugins)) || (array_key_exists('elementor-pro/elementor-pro.php', $all_plugins))) {
+			$wmh_elementor = new wmh_elementor();
+			$elementor_result = $wmh_elementor->fn_wmh_get_elementor_data($per_post, $offset);
+		}
+		if (!empty($elementor_result)) {
+			$mh_key = 'wmh_elementor_data';
+			$this->fn_wmh_insert_save_content($elementor_result, $mh_key);
+		}
+		if ($ajax_call == $total_ajax_call) {
+			delete_option('wmh_total_elementor_call');
+			$flg = 0;
+		} else {
+			$flg = 1;
+		}
+		$output = array(
+			'flg' => $flg,
+			'ajax_call' => $ajax_call + 1,
+			'progress_bar_width' => $progress_bar_width
+		);
+		echo json_encode($output);
+		wp_die();
 	}
 }
 

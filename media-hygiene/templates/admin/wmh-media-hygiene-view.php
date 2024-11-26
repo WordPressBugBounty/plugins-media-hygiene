@@ -14,11 +14,15 @@ class wmh_media_hygiene_view extends WP_List_Table
     public $wmh_unused_media_post_id;
     public $wmh_whitelist_media_post_id;
     public $wmh_temp;
+    public $wp_upload_dir;
+    public $basedir;
 
     public function fn_wmh_first_load()
     {
         global $wpdb;
         $this->conn = $wpdb;
+        $this->wp_upload_dir = wp_upload_dir();
+        $this->basedir = $this->wp_upload_dir['basedir'];
         $this->wp_posts = $this->conn->prefix . 'posts';
         $this->wp_postmeta = $this->conn->prefix . 'postmeta';
         $this->wmh_unused_media_post_id = $this->conn->prefix . MH_PREFIX . 'unused_media_post_id';
@@ -34,51 +38,56 @@ class wmh_media_hygiene_view extends WP_List_Table
         $total_media_result = 0;
 
         /* search box code. */
-        $search_term = '';
-        if (isset($_REQUEST['s'])) {
-            $search_term = sanitize_text_field(trim($_REQUEST['s']));
-        }
+        $search_term = isset($_REQUEST['s']) ? sanitize_text_field(trim($_REQUEST['s'])) : '';
 
         if (isset($_GET['page']) && sanitize_text_field($_GET['page']) == 'wmh-media-hygiene') {
 
             /* get scan option data. */
             $wmh_scan_option_data = get_option('wmh_scan_option_data', true);
-            $media_per_page_input = 10;
-            if (isset($wmh_scan_option_data['media_per_page_input']) && ($wmh_scan_option_data['media_per_page_input'] != '' || $wmh_scan_option_data['media_per_page_input'] != 0)) {
-                $media_per_page_input = $wmh_scan_option_data['media_per_page_input'];
-            }
+            $media_per_page_input = !empty($wmh_scan_option_data['media_per_page_input']) ? $wmh_scan_option_data['media_per_page_input'] : 10;
 
             $limit = $per_page = $media_per_page_input;
             $current_page = $this->get_pagenum();
             $offset = $limit * ($current_page - 1);
 
+            $type = isset($_GET['type']) ? sanitize_text_field($_GET['type']) : 'blacklist';
+
             /* get data */
-            $data = $this->fn_wmh_get_unused_media_data($search_term, $limit, $offset);
+            if ($type === 'blacklist' || $type === 'whitelist') {
+                $data = $this->fn_wmh_get_unused_media_data($search_term, $limit, $offset);
+                /* get pagination. */
+                if (is_array($data) && !empty($data)) {
+                    if ($type === 'blacklist') {
+                        $table_exists_prepare = $this->conn->get_var("SHOW TABLES LIKE '$this->wmh_unused_media_post_id'") == $this->wmh_unused_media_post_id;
+                        if ($table_exists_prepare) {
+                            $total_media_result = $this->conn->get_row('SELECT count(post_id) as total_media FROM ' . $this->wmh_unused_media_post_id . '');
+                            $total_media_result = $total_media_result->total_media;
+                        }
+                    } elseif ($type === 'whitelist') {
+                        $table_exists_prepare_2 = $this->conn->get_var("SHOW TABLES LIKE '$this->wmh_whitelist_media_post_id'") == $this->wmh_whitelist_media_post_id;
+                        if ($table_exists_prepare_2) {
+                            $total_media_result = $this->conn->get_row('SELECT count(post_id) as total_media FROM ' . $this->wmh_whitelist_media_post_id . '');
+                            $total_media_result = $total_media_result->total_media;
+                        }
+                    }
+                }
+            } else if ($type == 'trash') {
+                $data = $this->fn_get_trash_media_data($search_term, $limit, $offset);
+                $total_media_result = $this->conn->get_row('SELECT COUNT(ID) as total_media FROM ' . $this->conn->prefix . 'posts WHERE post_type = "attachment" AND post_status = "trash"');
+                $total_media_result = $total_media_result->total_media;
+            }
+
+
             /* filter data here */
             if (isset($_GET['attachment_cat']) || isset($_GET['date'])) {
                 $data = $this->fn_wmh_filter_data($limit, $offset);
             }
 
-            /* get pagination. */
-            if (is_array($data) && !empty($data)) {
-                if ((isset($_GET['type'])  && sanitize_text_field($_GET['type']) == 'blacklist') || (!isset($_GET['type']))) {
-                    $table_exists_prepare = $this->conn->get_var("SHOW TABLES LIKE '$this->wmh_unused_media_post_id'") == $this->wmh_unused_media_post_id;
-                    if ($table_exists_prepare) {
-                        $total_media_result = $this->conn->get_row('SELECT count(post_id) as total_media FROM ' . $this->wmh_unused_media_post_id . '');
-                        $total_media_result = $total_media_result->total_media;
-                    }
-                } else {
-                    $table_exists_prepare_2 = $this->conn->get_var("SHOW TABLES LIKE '$this->wmh_whitelist_media_post_id'") == $this->wmh_whitelist_media_post_id;
-                    if ($table_exists_prepare_2) {
-                        $total_media_result = $this->conn->get_row('SELECT count(post_id) as total_media FROM ' . $this->wmh_whitelist_media_post_id . '');
-                        $total_media_result = $total_media_result->total_media;
-                    }
-                }
-                if (isset($data['count'])) {
-                    $total_media_result = $data['count'];
-                    unset($data['count']);
-                }
+            if (isset($data['count'])) {
+                $total_media_result = $data['count'];
+                unset($data['count']);
             }
+
             $total_items = $total_media_result;
             if ($total_items != '') {
                 $this->set_pagination_args(array(
@@ -86,7 +95,9 @@ class wmh_media_hygiene_view extends WP_List_Table
                     'per_page' => ceil($per_page)
                 ));
             }
+
             if (is_array($data) && !empty($data)) {
+
                 /* item, which appear in list table. */
                 $this->items = $data;
             }
@@ -99,6 +110,103 @@ class wmh_media_hygiene_view extends WP_List_Table
         /* view */
         $this->views();
     }
+
+    /* Function to get trash media data */
+    public function fn_get_trash_media_data($search_term = '', $limit = '', $offset = '')
+    {
+
+        $table_data = array();
+        $posts_data = array();
+        $count = 0;
+
+        $sql_count = "SELECT COUNT(ID) FROM {$this->wp_posts} WHERE post_type = 'attachment' AND post_status = 'trash'";
+        if ($search_term) {
+            $sql_count .= " AND (ID LIKE '%$search_term%' OR post_title LIKE '%$search_term%' OR post_mime_type LIKE '%$search_term%' OR guid LIKE '%$search_term%')";
+        }
+        $count = $this->conn->get_var($sql_count);
+
+        $sql = "SELECT ID, post_title, post_date, post_mime_type FROM {$this->wp_posts} WHERE post_type = 'attachment' AND post_status = 'trash'";
+        if ($search_term) {
+            $sql .= " AND (ID LIKE '%$search_term%' OR post_title LIKE '%$search_term%' OR post_mime_type LIKE '%$search_term%' OR guid LIKE '%$search_term%')";
+        }
+        $sql .= " LIMIT $limit OFFSET $offset";
+
+
+        $posts_data = $this->conn->get_results($sql, ARRAY_A);
+
+        if (!empty($posts_data)) {
+            foreach ($posts_data as $pd) {
+                $pd_id = $pd['ID'];
+                $pd_title = $pd['post_title'];
+                $pd_date = $pd['post_date'];
+                $post_mime_type = $pd['post_mime_type'];
+                $pd_size = $this->fn_wmh_calculate_size($pd_id, $post_mime_type);
+                $table_data[] = $this->fn_wmh_display_data($pd_id, $pd_title, $pd_date, $post_mime_type, $pd_size);
+            }
+        }
+
+        if ($count) {
+            $table_data['count'] = $count;
+        }
+
+        return $table_data;
+    }
+
+    public function fn_wmh_calculate_size($attachment_id = '', $post_mime_type = '', $media_size_array = array())
+    {
+        /* declare array */
+        $register_size_by_post = array();
+
+        /* get original image path */
+        $original_image_path = wp_get_original_image_path($attachment_id);
+        $original_image_path = substr($original_image_path, 0, strrpos($original_image_path, "/"));
+
+        if (str_contains($post_mime_type, 'image')) {
+            /* get attachment size data by id */
+            $attachment_size = wp_get_attachment_metadata($attachment_id);
+            if (isset($attachment_size['sizes']) && !empty($attachment_size['sizes'])) {
+                $register_size_by_post = array_keys($attachment_size['sizes']);
+            }
+            /* main file */
+            if (isset($attachment_size['file']) && $attachment_size['file'] != '') {
+                $main_file_path = $this->basedir . '/' . $attachment_size['file'];
+                $main_file_path_size = wp_filesize($main_file_path);
+                array_push($media_size_array, $main_file_path_size);
+            }
+            if (isset($register_size_by_post) && !empty($register_size_by_post)) {
+                foreach ($register_size_by_post as $rsp) {
+                    /* check multiple size */
+                    if (isset($attachment_size['sizes'][$rsp]['file'])) {
+                        if ($attachment_size['sizes'][$rsp]['file'] != '') {
+                            $multi_file_name = $attachment_size['sizes'][$rsp]['file'];
+                            $make_new_file_name = $original_image_path . '/' . $multi_file_name;
+                            $make_new_file_name_size = wp_filesize($make_new_file_name);
+                            array_push($media_size_array, $make_new_file_name_size);
+                        }
+                    }
+                }
+            }
+            /* check original image */
+            if (isset($attachment_size['original_image']) && $attachment_size['original_image'] != '') {
+                $original_image_path = wp_get_original_image_path($attachment_id);
+                $original_image_size = wp_filesize($original_image_path);
+                array_push($media_size_array, $original_image_size);
+            }
+            /* check file size for svg */
+            if (str_contains($post_mime_type, 'svg')) {
+                if (isset($attachment_size['filesize']) && $attachment_size['filesize'] != '') {
+                    $svg_file_size = $attachment_size['filesize'];
+                    array_push($media_size_array, $svg_file_size);
+                }
+            }
+        } else {
+            /* get media size. */
+            $attachment_filesize = wp_filesize(get_attached_file($attachment_id));
+            array_push($media_size_array, $attachment_filesize);
+        }
+        return array_sum($media_size_array);
+    }
+
 
     /* default header view */
     public function fn_wmh_header_view()
@@ -136,6 +244,12 @@ class wmh_media_hygiene_view extends WP_List_Table
         $wmh_general->fn_wmh_get_template('wmh-button-view.php');
     }
 
+    public function fn_wmh_trash_action_view()
+    {
+        $wmh_general = new wmh_general();
+        $wmh_general->fn_wmh_get_template('wmh-trash-view.php');
+    }
+
     /* filter select box */
     public function extra_tablenav($which)
     {
@@ -148,28 +262,29 @@ class wmh_media_hygiene_view extends WP_List_Table
 
     public function get_views()
     {
-
-        $blacklist_style = '';
-        $whitelist_style = '';
-        if ((isset($_GET['type'])  && sanitize_text_field($_GET['type']) == 'blacklist') || (!isset($_GET['type']))) {
-            $blacklist_style = 'style="color:green;font-weight:600"';
-        } else {
-            $whitelist_style = 'style="color:green;font-weight:600"';
-        }
+        $types = ['blacklist', 'whitelist', 'trash'];
+        $styles = [];
         $admin_url = admin_url();
 
-        /* get count of blacklist media or whitelist media */
+        $current_type = isset($_GET['type']) ? sanitize_text_field($_GET['type']) : 'blacklist';
+
+        foreach ($types as $type) {
+            $styles[$type] = ($current_type === $type) ? 'style="color:green;font-weight:600"' : '';
+        }
+
         $blacklist_count = $this->fn_wmh_count_blacklist_media();
         $whitelist_count = $this->fn_wmh_count_whitelist_media();
+        $trash_count =  wp_count_posts('attachment')->trash;
 
-        $blacklist_html = '<a href="' . esc_url($admin_url) . 'admin.php?page=wmh-media-hygiene&type=blacklist" ' . $blacklist_style . '>' . __("Unused", MEDIA_HYGIENE) . '</a>&nbsp;<span>(' . esc_html($blacklist_count) . ')<span>';
-        $whitelist_html = '<a href="' . esc_url($admin_url) . 'admin.php?page=wmh-media-hygiene&type=whitelist" ' . $whitelist_style . '>' . __("Whitelist", MEDIA_HYGIENE) . '</a>&nbsp;<span>(' . esc_html($whitelist_count) . ')<span>';
-        $status_links = array(
-            'blacklist' => $blacklist_html,
-            'whitelist' => $whitelist_html
-        );
+        $status_links = [
+            'blacklist' => '<a href="' . esc_url($admin_url) . 'admin.php?page=wmh-media-hygiene&type=blacklist" ' . $styles['blacklist'] . '>' . __("Unused", MEDIA_HYGIENE) . '</a>&nbsp;<span>(' . esc_html($blacklist_count) . ')</span>',
+            'whitelist' => '<a href="' . esc_url($admin_url) . 'admin.php?page=wmh-media-hygiene&type=whitelist" ' . $styles['whitelist'] . '>' . __("Whitelist", MEDIA_HYGIENE) . '</a>&nbsp;<span>(' . esc_html($whitelist_count) . ')</span>',
+            'trash'     => '<a href="' . esc_url($admin_url) . 'admin.php?page=wmh-media-hygiene&type=trash" ' . $styles['trash'] . '>' . __("Trash", MEDIA_HYGIENE) . '</a>&nbsp;<span>(' . esc_html($trash_count) . ')</span>'
+        ];
+
         return $status_links;
     }
+
 
 
     /* default column function. */
@@ -256,16 +371,19 @@ class wmh_media_hygiene_view extends WP_List_Table
 
         /* get original guid url from post id */
         $guid = sanitize_url($item['image']);
-        if ((isset($_GET['type'])  && sanitize_text_field($_GET['type']) == 'blacklist') || (!isset($_GET['type']))) {
+
+        $type = isset($_GET['type']) ? sanitize_text_field($_GET['type']) : 'blacklist';
+
+        if ($type == 'blacklist') {
             $action = array(
                 'edit' => "<a href='post.php?post=" . esc_attr($item['id']) . "&action=edit' target='_blank'>" . esc_html(__('Edit', MEDIA_HYGIENE)) . "</a>",
-                'delete' => "<a href='javascript:void(0)' role='button' onclick='fn_wmh_delete_single_image( " . esc_js($item['id']) . ", " . esc_js($item['file_size']) . ")'>" . esc_html(__('Delete Permanently', MEDIA_HYGIENE)) . " <i class='fa-solid fa-spinner fa-spin delete-loader-" . esc_attr($item['id']) . "' style='display:none'></i></a>",
+                'trash' => "<a href='javascript:void(0)' role='button' onclick='fn_wmh_row_action_trash( " . esc_js($item['id']) . ", " . esc_js($item['file_size']) . ")'>" . esc_html(__('Trash', MEDIA_HYGIENE)) . " <i class='fa-solid fa-spinner fa-spin row-action-trash-loader-" . esc_attr($item['id']) . "' style='display:none'></i></a>",
                 'view' => '<a href=' . esc_url($guid) . ' target="_blank">' . esc_html(__('View', MEDIA_HYGIENE)) . '</a>',
                 'copy' => "<a href='javascript:void(0)' role='button' onclick='fn_wmh_copy_clipbord( \" " . esc_js($guid) . " \", " . esc_js($item['id']) . "  )' class='copy-class-" . esc_attr($item['id']) . "'>" . esc_html(__('Copy URL To Clipboard', MEDIA_HYGIENE)) . "<i class='fa-solid fa-check copied-done-" . esc_attr($item['id']) . "' aria-hidden='true' style='color:green;display:none;'></i></a>",
                 'whitelist' => "<a href='javascript:void(0)' role='button' onclick='fn_wmh_whitelist_single_image( " . esc_js($item['id']) . ")'>" . esc_html(__('Add To Whitelist', MEDIA_HYGIENE)) . " <i class='fa-solid fa-spinner fa-spin whitelist-loader-" . esc_attr($item['id']) . "' style='display:none'></i></a>",
             );
             return sprintf('%1$s %2$s', '<span>' . esc_html($item['name']) . '</span></br><span>' . esc_html($files_count) . '</span>', $this->row_actions($action));
-        } else {
+        } elseif ($type == 'whitelist') {
             $action = array(
                 'edit' => "<a href='post.php?post=" . esc_attr($item['id']) . "&action=edit' target='_blank'>" . esc_html(__('Edit', MEDIA_HYGIENE)) . "</a>",
                 'view' => '<a href=' . esc_url($guid) . ' target="_blank">' . esc_html(__('View', MEDIA_HYGIENE)) . '</a>',
@@ -273,6 +391,14 @@ class wmh_media_hygiene_view extends WP_List_Table
                 'blacklist' => "<a href='javascript:void(0)' role='button' onclick='fn_wmh_blacklist_single_image( " . esc_js($item['id']) . ")'>" . esc_html(__('Remove From Whitelist', MEDIA_HYGIENE)) . " <i class='fa-solid fa-spinner fa-spin blacklist-loader-" . esc_attr($item['id']) . "' style='display:none'></i></a>",
             );
             return sprintf('%1$s %2$s', '<span style="color:green;font-weight:600;">' . esc_html($item['name']) . '</span><br><span>' . esc_html($files_count) . '</span>', $this->row_actions($action));
+        } elseif ($type == 'trash') {
+            $action = array(
+                'restore' => "<a href='javascript:void(0)' role='button' onclick='fn_wmh_restore_single_image( " . esc_js($item['id']) . ", " . esc_js($item['file_size']) . ")'>" . esc_html(__('Restore', MEDIA_HYGIENE)) . " <i class='fa-solid fa-spinner fa-spin restore-loader-" . esc_attr($item['id']) . "' style='display:none'></i></a>",
+                'delete' => "<a href='javascript:void(0)' role='button' onclick='fn_wmh_delete_permanently_single_image( " . esc_js($item['id']) . ", " . esc_js($item['file_size']) . ")'>" . esc_html(__('Delete Permanently', MEDIA_HYGIENE)) . " <i class='fa-solid fa-spinner fa-spin delete-loader-" . esc_attr($item['id']) . "' style='display:none'></i></a>",
+                'view' => '<a href=' . esc_url($guid) . ' target="_blank">' . esc_html(__('View', MEDIA_HYGIENE)) . '</a>',
+                'copy' => "<a href='javascript:void(0)' role='button' onclick='fn_wmh_copy_clipbord( \" " . esc_js($guid) . " \", " . esc_js($item['id']) . "  )' class='copy-class-" . esc_attr($item['id']) . "'>" . esc_html(__('Copy URL To Clipboard', MEDIA_HYGIENE)) . "<i class='fa-solid fa-check copied-done-" . esc_attr($item['id']) . "' aria-hidden='true' style='color:green;display:none;'></i></a>"
+            );
+            return sprintf('%1$s %2$s', '<span>' . esc_html($item['name']) . '</span></br><span>' . esc_html($files_count) . '</span>', $this->row_actions($action));
         }
     }
 
@@ -332,15 +458,21 @@ class wmh_media_hygiene_view extends WP_List_Table
     /* bulk actions */
     public function get_bulk_actions()
     {
+        $type = isset($_GET['type']) ? sanitize_text_field($_GET['type']) : 'blacklist';
         $actions = array();
-        if ((isset($_GET['type'])  && sanitize_text_field($_GET['type']) == 'blacklist') || (!isset($_GET['type']))) {
+        if ($type === 'blacklist') {
             $actions = array(
-                'delete' => esc_html(__('Delete', MEDIA_HYGIENE)),
-                'whitelist' => esc_html(__('Whitelist', MEDIA_HYGIENE))
+                'whitelist' => esc_html(__('Whitelist', MEDIA_HYGIENE)),
+                'trash' => esc_html(__('Trash', MEDIA_HYGIENE))
             );
-        } else {
+        } elseif ($type === 'whitelist') {
             $actions = array(
                 'blacklist' => esc_html(__('Blacklist', MEDIA_HYGIENE))
+            );
+        } elseif ($type === 'trash') {
+            $actions = array(
+                'restore' => esc_html(__('Restore', MEDIA_HYGIENE)),
+                'delete' => esc_html(__('Delete Permanently', MEDIA_HYGIENE))
             );
         }
         return $actions;
@@ -349,15 +481,13 @@ class wmh_media_hygiene_view extends WP_List_Table
     /* search box. */
     public function fn_wmh_search_box_html()
     {
-        $list_input = '';
-        if ((isset($_GET['type'])  && sanitize_text_field($_GET['type']) == 'blacklist') || (!isset($_GET['type']))) {
-            $list_input = 'blacklist';
-        } else {
-            $list_input = 'whitelist';
+        $type = isset($_GET['type']) ? sanitize_text_field($_GET['type']) : 'blacklist';
+        if (!in_array($type, ['blacklist', 'whitelist', 'trash'])) {
+            $type = 'blacklist';
         }
         echo '<form method="get" id="form_search_post" name="form_search_post">';
         echo '<input type="hidden" name="page" value="wmh-media-hygiene">';
-        echo '<input type="hidden" name="type" value="' . esc_attr($list_input) . '">';
+        echo '<input type="hidden" name="type" value="' . esc_attr($type) . '">';
         $this->search_box('Search', 'search_post_id');
         echo '</form>';
     }
@@ -487,84 +617,115 @@ class wmh_media_hygiene_view extends WP_List_Table
             $date = sanitize_text_field($_GET['date']);
         }
 
-        /* filter data here by blacklist or whitelist. */
-        if ((isset($_GET['type'])  && sanitize_text_field($_GET['type']) == 'blacklist') || (!isset($_GET['type']))) {
+        /* filter data here by blacklist, whitelist, or trash. */
+        $type = isset($_GET['type']) ? sanitize_text_field($_GET['type']) : 'blacklist';
+
+        if ($type === 'blacklist') {
             $sql1 = "SELECT p.ID, p.post_title, p.post_date, p.post_mime_type, u.size FROM " . $this->wp_posts . " AS p INNER JOIN " . $this->wmh_unused_media_post_id . " AS u ON p.ID = u.post_id";
-        } else {
+        } elseif ($type === 'whitelist') {
             $sql1 = "SELECT p.ID, p.post_title, p.post_date, p.post_mime_type, u.size FROM " . $this->wp_posts . " AS p INNER JOIN " . $this->wmh_whitelist_media_post_id . " AS u ON p.ID = u.post_id";
+        } elseif ($type === 'trash') {
+            $sql1 = "SELECT ID, post_title, post_date, post_mime_type FROM " . $this->wp_posts . "";
         }
 
         if ($attachment_cat == 'images') {
             if ($date) {
-                $sql1 .= "WHERE p.post_type = 'attachment' AND p.post_mime_type LIKE '%image%' AND p.post_date LIKE '%" . $date . "%' ";
-                $posts_data = $this->conn->get_results($sql1, ARRAY_A);
-                $count = count($posts_data);
+                if ($type == 'trash') {
+                    $sql1 .= " WHERE post_status = 'trash' AND post_type = 'attachment' AND post_mime_type LIKE '%image%' AND post_date LIKE '%" . $date . "%'";
+                } else {
+                    $sql1 .= " WHERE p.post_type = 'attachment' AND p.post_mime_type LIKE '%image%' AND post_date LIKE '%" . $date . "%'";
+                }
             } else {
-                $sql1 .= " WHERE p.post_type = 'attachment' AND p.post_mime_type LIKE '%image%' ";
-                $posts_data = $this->conn->get_results($sql1, ARRAY_A);
-                $count = count($posts_data);
+                if ($type == 'trash') {
+                    $sql1 .= " WHERE post_status = 'trash' AND post_type = 'attachment' AND post_mime_type LIKE '%image%'";
+                } else {
+                    $sql1 .= " WHERE p.post_type = 'attachment' AND p.post_mime_type LIKE '%image%'";
+                }
             }
         }
 
         if ($attachment_cat == 'documents') {
             if ($date) {
-                $sql1 .= " WHERE p.post_type = 'attachment' AND p.post_mime_type LIKE '%application%' AND p.post_date LIKE '%" . $date . "%'";
-                $posts_data = $this->conn->get_results($sql1, ARRAY_A);
-                $count = count($posts_data);
+                if ($type == 'trash') {
+                    $sql1 .= " WHERE post_status = 'trash' AND post_type = 'attachment' AND post_mime_type LIKE '%application%' AND post_date LIKE '%" . $date . "%'";
+                } else {
+                    $sql1 .= " WHERE p.post_type = 'attachment' AND p.post_mime_type LIKE '%application%' AND post_date LIKE '%" . $date . "%'";
+                }
             } else {
-                $sql1 .= " WHERE p.post_type = 'attachment' AND p.post_mime_type LIKE '%application%'";
-                $posts_data = $this->conn->get_results($sql1, ARRAY_A);
-                $count = count($posts_data);
+                if ($type == 'trash') {
+                    $sql1 .= " WHERE post_status = 'trash' AND post_type = 'attachment' AND post_mime_type LIKE '%application%'";
+                } else {
+                    $sql1 .= " WHERE p.post_type = 'attachment' AND p.post_mime_type LIKE '%application%'";
+                }
             }
         }
 
         if ($attachment_cat == 'audio') {
             if ($date) {
-                $sql1 .= " WHERE p.post_type = 'attachment' AND p.post_mime_type LIKE '%audio%' AND p.post_date LIKE '%" . $date . "%' AND";
-                $posts_data = $this->conn->get_results($sql1, ARRAY_A);
-                $count = count($posts_data);
+                if ($type == 'trash') {
+                    $sql1 .= " WHERE post_status = 'trash' AND post_type = 'attachment' AND post_mime_type LIKE '%audio%' AND post_date LIKE '%" . $date . "%'";
+                } else {
+                    $sql1 .= " WHERE p.post_type = 'attachment' AND p.post_mime_type LIKE '%audio%' AND post_date LIKE '%" . $date . "%'";
+                }
             } else {
-                $sql1 .= " WHERE p.post_type = 'attachment' AND p.post_mime_type LIKE '%audio%'";
-                $posts_data = $this->conn->get_results($sql1, ARRAY_A);
-                $count = count($posts_data);
+                if ($type == 'trash') {
+                    $sql1 .= " WHERE post_status = 'trash' AND post_type = 'attachment' AND post_mime_type LIKE '%audio%'";
+                } else {
+                    $sql1 .= " WHERE p.post_type = 'attachment' AND p.post_mime_type LIKE '%audio%'";
+                }
             }
         }
 
         if ($attachment_cat == 'video') {
             if ($date) {
-                $sql1 .= " WHERE p.post_type = 'attachment' AND p.post_mime_type LIKE '%video%' AND p.post_date LIKE '%" . $date . "%'";
-                $posts_data = $this->conn->get_results($sql1, ARRAY_A);
-                $count = count($posts_data);
+                if ($type == 'trash') {
+                    $sql1 .= " WHERE post_status = 'trash' AND post_type = 'attachment' AND post_mime_type LIKE '%video%' AND post_date LIKE '%" . $date . "%'";
+                } else {
+                    $sql1 .= " WHERE p.post_type = 'attachment' AND p.post_mime_type LIKE '%video%' AND post_date LIKE '%" . $date . "%'";
+                }
             } else {
-                $sql1 .= " WHERE p.post_type = 'attachment' AND p.post_mime_type LIKE '%video%'";
-                $posts_data = $this->conn->get_results($sql1, ARRAY_A);
-                $count = count($posts_data);
+                if ($type == 'trash') {
+                    $sql1 .= " WHERE post_status = 'trash' AND post_type = 'attachment' AND post_mime_type LIKE '%video%'";
+                } else {
+                    $sql1 .= " WHERE p.post_type = 'attachment' AND p.post_mime_type LIKE '%video%'";
+                }
             }
         }
 
         if ($attachment_cat == 'others') {
             if ($date) {
-                $sql1 .= " WHERE p.post_type = 'attachment' AND p.post_mime_type NOT LIKE '%image%' AND p.post_mime_type NOT LIKE '%application%' AND p.post_mime_type NOT LIKE '%audio%' AND p.post_mime_type NOT LIKE '%video%' AND p.post_date LIKE '%" . $date . "%'";
-                $posts_data = $this->conn->get_results($sql1, ARRAY_A);
-                $count = count($posts_data);
+                if ($type == 'trash') {
+                    $sql1 .= " WHERE post_status = 'trash' AND post_type = 'attachment' AND post_mime_type NOT LIKE '%image%' AND post_mime_type NOT LIKE '%application%' AND post_mime_type NOT LIKE '%audio%' AND post_mime_type NOT LIKE '%video%' AND post_date LIKE '%" . $date . "%'";
+                } else {
+                    $sql1 .= " WHERE p.post_type = 'attachment' AND p.post_mime_type NOT LIKE '%image%' AND post_mime_type NOT LIKE '%application%' AND post_mime_type NOT LIKE '%audio%' AND post_mime_type NOT LIKE '%video%' AND post_date LIKE '%" . $date . "%'";
+                }
             } else {
-                $sql1 .= " WHERE p.post_type = 'attachment' AND p.post_mime_type NOT LIKE '%image%' AND p.post_mime_type NOT LIKE '%application%' AND p.post_mime_type NOT LIKE '%audio%' AND p.post_mime_type NOT LIKE '%video%' AND p.post_date LIKE '%" . $date . "%'";
-                $posts_data = $this->conn->get_results($sql1, ARRAY_A);
-                $count = count($posts_data);
+                if ($type == 'trash') {
+                    $sql1 .= " WHERE post_status = 'trash' AND post_type = 'attachment' AND post_mime_type NOT LIKE '%image%' AND post_mime_type NOT LIKE '%application%' AND post_mime_type NOT LIKE '%audio%' AND post_mime_type NOT LIKE '%video%'";
+                } else {
+                    $sql1 .= " WHERE p.post_type = 'attachment' AND p.post_mime_type NOT LIKE '%image%' AND post_mime_type NOT LIKE '%application%' AND post_mime_type NOT LIKE '%audio%' AND post_mime_type NOT LIKE '%video%'";
+                }
             }
         }
 
         if ($attachment_cat == 'all' || $attachment_cat == '') {
             if ($date) {
-                $sql1 .= " WHERE p.post_type = 'attachment' AND p.post_date LIKE '%" . $date . "%'";
-                $posts_data = $this->conn->get_results($sql1, ARRAY_A);
-                $count = count($posts_data);
+                if ($type == 'trash') {
+                    $sql1 .= " WHERE post_status = 'trash' AND post_type = 'attachment' AND post_date LIKE '%" . $date . "%'";
+                } else {
+                    $sql1 .= " WHERE p.post_type = 'attachment' AND post_date LIKE '%" . $date . "%'";
+                }
             } else {
-                $sql1 .= " WHERE p.post_type = 'attachment'";
-                $posts_data = $this->conn->get_results($sql1, ARRAY_A);
-                $count = count($posts_data);
+                if ($type == 'trash') {
+                    $sql1 .= " WHERE post_status = 'trash' AND post_type = 'attachment'";
+                } else {
+                    $sql1 .= " WHERE p.post_type = 'attachment'";
+                }
             }
         }
+
+        $posts_data_count = $this->conn->get_results($sql1, ARRAY_A);
+        $count = count($posts_data_count);
 
         $sql1 .= 'LIMIT ' . $limit . ' OFFSET ' . $offset . '';
         $posts_data = $this->conn->get_results($sql1, ARRAY_A);
@@ -576,7 +737,11 @@ class wmh_media_hygiene_view extends WP_List_Table
                 $p_title = $post['post_title'];
                 $p_date = $post['post_date'];
                 $post_mime_type = $post['post_mime_type'];
-                $p_size = $post['size'];
+                if ($type == 'trash') {
+                    $p_size = '-';
+                } else {
+                    $p_size = $post['size'];
+                }
                 $table_data[] = $this->fn_wmh_display_data($p_id, $p_title, $p_date, $post_mime_type, $p_size);
             }
         }
@@ -587,6 +752,7 @@ class wmh_media_hygiene_view extends WP_List_Table
 
         return $table_data;
     }
+
 
     public function fn_wmh_count_blacklist_media()
     {
@@ -651,14 +817,17 @@ class wmh_media_hygiene_view extends WP_List_Table
     }
 }
 
+$type = isset($_GET['type']) ? sanitize_text_field($_GET['type']) : 'blacklist';
 $wmh_media_hygiene_view = new wmh_media_hygiene_view();
 $wmh_media_hygiene_view->fn_wmh_header_view();
 $wmh_media_hygiene_view->fn_wmh_first_load();
 $wmh_media_hygiene_view->fn_wmh_heading_and_notice();
-if ((isset($_GET['type'])  && $_GET['type'] == 'blacklist') || (!isset($_GET['type']))) {
+if ($type === 'blacklist') {
     $wmh_media_hygiene_view->fn_wmh_new_media_added_info();
     $wmh_media_hygiene_view->fn_wmh_dashboard_html();
     $wmh_media_hygiene_view->fn_wmh_scan_button_html();
+} elseif ($type === 'trash') {
+    $wmh_media_hygiene_view->fn_wmh_trash_action_view();
 }
 $wmh_media_hygiene_view->prepare_items();
 $wmh_media_hygiene_view->fn_wmh_search_box_html();

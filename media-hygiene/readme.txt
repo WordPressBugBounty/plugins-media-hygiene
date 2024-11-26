@@ -6,8 +6,8 @@ Contributors: slui
 Tags: unused media, clean, delete, remove, images
 Requires at least: 5.3
 Requires PHP: 7.4
-Tested up to: 6.6
-Stable tag: 3.0.2
+Tested up to: 6.7
+Stable tag: 4.0.0
 License: Custom
 License URI: Custom license, no Distribution allowed
 
@@ -33,9 +33,9 @@ Get it now and keep your WordPress site super clean!
 
 - Uploading the same images in different sizes to figure out optimal size and forgetting which one was actually used.
 
-- Switching out an image in a post with another and can’t find it media library file.
+- Switching out an image in a post with another and canâ€™t find it media library file.
 
-- Updating the logo with a new version and don’t want the old one to be indexed by Google.
+- Updating the logo with a new version and donâ€™t want the old one to be indexed by Google.
 
 - Images included with purchased theme but never deleted after site was launched.
 
@@ -53,7 +53,7 @@ Get it now and keep your WordPress site super clean!
 
 ### How is it Different?
 
- - [Media Hygiene Pro](https://mediahygiene.com) scans the entire website using a number of different techniques. One way is to “visualize images/media in page source code” to confirm the existence of a media file even when builders/plugins/themes use specialized custom posts to display their widgets on-screen.
+ - [Media Hygiene Pro](https://mediahygiene.com) scans the entire website using a number of different techniques. One way is to visualize images/media in page source code to confirm the existence of a media file even when builders/plugins/themes use specialized custom posts to display their widgets on-screen.
 
 ### File Types:
 
@@ -61,23 +61,23 @@ Get it now and keep your WordPress site super clean!
 
 ### Standard Features:
 
-- Dashboard – shows list of all unused media by occupied space and by type.
+- Dashboard - shows list of all unused media by occupied space and by type.
 
-- Notifications – get email notifications when new files have been uploaded and not scanned on a specific schedule (daily, weekly, bi-weekly, monthly, quarterly)
+- Notifications - get email notifications when new files have been uploaded and not scanned on a specific schedule (daily, weekly, bi-weekly, monthly, quarterly)
 
-- Site builder compatibility – works with all major site builders such as Elementor (see list below).
+- Site builder compatibility - works with all major site builders such as Elementor (see list below).
 
-- Whitelist – keep files safe from deletion. Perfect for files linked to from off-site sources.
+- Whitelist - keep files safe from deletion. Perfect for files linked to from off-site sources.
 
-- Filtering – files by name and date.
+- Filtering - files by name and date.
 
-- Backup – download unused media file individually or by page.
+- Backup - download unused media file individually or by page.
 
-- Delete – remove files individually or by page.
+- Delete - remove files individually or by page.
 
-- Scan – scanning process for all media files not linked to any page/post or other theme settings.
+- Scan - scanning process for all media files not linked to any page/post or other theme settings.
 
-- Support – only through WordPress repository.
+- Support - only through WordPress repository.
 
 ### Changelog ###
 **[Check latest here](https://mediahygiene.com/changelog/)**
@@ -87,7 +87,7 @@ Get it now and keep your WordPress site super clean!
 
 Please check our website to see a completely list of compatible plugins/themes.
 
-- Gutenberg – Standard
+- Gutenberg - Standard
 
 - Elementor Basic - Standard
 
@@ -107,7 +107,7 @@ Please check our website to see a completely list of compatible plugins/themes.
 
 - Flatsome (theme)
 
-* More to come…
+* More to comeâ€¦
 
 
 ### **[Pro](https://mediahygiene.com)** (available now)
@@ -181,7 +181,7 @@ Please check our website to see a completely list of compatible plugins/themes.
 
 = How do I know which media files are unused and safe to delete? =
 
-The Media Hygiene plugin has a built-in media scanner that looks at the WordPress database, theme and plugin(s) to identify which media files are no longer in use. You’ll be presented a list in our dashboard that is safe to delete.
+The Media Hygiene plugin has a built-in media scanner that looks at the WordPress database, theme and plugin(s) to identify which media files are no longer in use. Youâ€™ll be presented a list in our dashboard that is safe to delete.
 
 Please backup your site before you delete the files.
 

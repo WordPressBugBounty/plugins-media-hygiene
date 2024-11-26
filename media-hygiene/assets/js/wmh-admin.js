@@ -49,8 +49,8 @@ jQuery(document).on('click', '#scan-button', function (e) {
     jQuery('#create-zip-button').attr('disabled', 'disabled');
     jQuery('#create-zip-button').css('cursor', 'not-allowed');
     /* disable and unclickable delete-page-media-button  */
-    jQuery('#delete-page-media-button').attr('disabled', 'disabled');
-    jQuery('#delete-page-media-button').css('cursor', 'not-allowed');
+    jQuery('#trash-page-media-button').attr('disabled', 'disabled');
+    jQuery('#trash-page-media-button').css('cursor', 'not-allowed');
     /* disable and unclickable download page media button */
     jQuery('#create-page-zip-button').attr('disabled', 'disabled');
     jQuery('#create-page-zip-button').css('cursor', 'not-allowed');
@@ -154,10 +154,41 @@ function fnFetchDataFromDatabase(fetchDataAjaxCall = '', fetchDataProgressBar = 
             } else if (res.flg == 0) {
                 alert(res.message);
                 location.reload();
+            } else if (res.flg == 3) {
+                elementor_ajax_call = 0;
+                fnSpecialProcessForElementor(ajax_call, elementor_ajax_call, progress_bar_width);
             }
         }
     });
 
+}
+
+function fnSpecialProcessForElementor(ajax_call = '', elementor_ajax_call = '', progress_bar_width = '') {
+    let data = {
+        action: 'fetch_data_from_elementor',
+        ajax_call: elementor_ajax_call,
+        progress_bar: progress_bar_width
+    }
+    jQuery.ajax({
+        type: 'POST',
+        url: wmhObj.ajaxurl,
+        data: data,
+        success: function (res) {
+            var res = JSON.parse(res);
+            console.log(res);
+            /* progress bar. */
+            if (res.progress_bar_width < 100 || res.progress_bar_width == 100) {
+                jQuery('.progress .bar').css('width', res.progress_bar_width + '%');
+                jQuery('.progress .percent').text(res.progress_bar_width + '%');
+            }
+            if (res.flg == 0) {
+                ajax_call++;
+                fnFetchDataFromDatabase(ajax_call, progress_bar_width);
+            } else if (res.flg == 1) {
+                fnSpecialProcessForElementor(ajax_call, res.ajax_call, res.progress_bar_width);
+            }
+        }
+    });
 }
 
 /* scanning data */
@@ -240,10 +271,10 @@ function fnFetchStatisticsData(statisticsAjaxCall = '') {
 
 
 
-/* single image delete, wp list table action row. */
-function fn_wmh_delete_single_image(post_id = '', file_size = '') {
+/* row action - trash */
+function fn_wmh_row_action_trash(post_id = '', file_size = '') {
     var data = {
-        action: 'delete_single_image_call',
+        action: 'row_action_trash',
         post_id: post_id,
         file_size: file_size,
         nonce: wmhObj.nonce
@@ -253,7 +284,7 @@ function fn_wmh_delete_single_image(post_id = '', file_size = '') {
         url: wmhObj.ajaxurl,
         data: data,
         beforeSend: function () {
-            jQuery('.delete-loader-' + post_id + '').css('display', 'inline-block');
+            jQuery('.row-action-trash-loader-' + post_id + '').css('display', 'inline-block');
         },
         success: function (data) {
             var data = JSON.parse(data);
@@ -265,7 +296,35 @@ function fn_wmh_delete_single_image(post_id = '', file_size = '') {
             }
         },
         complete: function (data) {
-            jQuery('.delete-loader-' + post_id + '').css('display', 'none');
+            jQuery('.row-action-trash-loader-' + post_id + '').css('display', 'none');
+        }
+    });
+}
+
+/* restore single image from trash page */
+function fn_wmh_restore_single_image(post_id = '', file_size = '') {
+    var data = {
+        action: 'restore_single_image_call',
+        post_id: post_id,
+        file_size: file_size,
+        nonce: wmhObj.nonce
+    };
+    jQuery.ajax({
+        type: 'POST',
+        url: wmhObj.ajaxurl,
+        data: data,
+        beforeSend: function () {
+            jQuery('.restore-loader-' + post_id + '').css('display', 'inline-block');
+        },
+        success: function (data) {
+            var data = JSON.parse(data);
+            alert(data.message);
+            if (data.flg == '1') {
+                location.reload();
+            }
+        },
+        complete: function (data) {
+            jQuery('.restore-loader-' + post_id + '').css('display', 'none');
         }
     });
 }
@@ -480,7 +539,7 @@ jQuery(document).on('click', '#filter-submit', function (e) {
 /* Bulk media top selector delete. */
 jQuery(document).on('click', '#doaction', function () {
     var bulk_action_val = jQuery('#bulk-action-selector-top').val().trim();
-    if (bulk_action_val != '' && bulk_action_val == 'delete') {
+    if (bulk_action_val != '' && bulk_action_val == 'trash') {
         var chek_box_val = jQuery.map(jQuery('.single-check-image:checked'), function (n, i) {
             return n.value;
         });
@@ -494,7 +553,7 @@ jQuery(document).on('click', '#doaction', function () {
             type: 'POST',
             url: wmhObj.ajaxurl,
             data: {
-                action: 'bulk_action_delete',
+                action: 'bulk_action_trash',
                 bulk_action_val: bulk_action_val,
                 chek_box_val: chek_box_val,
                 size: sizes,
@@ -539,6 +598,62 @@ jQuery(document).on('click', '#doaction', function () {
                 action: 'bulk_action_to_blacklist',
                 bulk_action_val: bulk_action_val,
                 chek_box_val: chek_box_val
+            },
+            success: function (data) {
+                var data = JSON.parse(data);
+                if (data.flg == '1') {
+                    alert(data.message);
+                    location.reload();
+                }
+            }
+        });
+    } else if (bulk_action_val != '' && bulk_action_val == 'restore') {
+        var chek_box_val = jQuery.map(jQuery('.single-check-image:checked'), function (n, i) {
+            return n.value;
+        });
+        var sizes = []
+        /* get size*/
+        jQuery('.single-check-image:checked').each(function () {
+            var size = jQuery(this).data('size');
+            sizes.push(size);
+        });
+        jQuery.ajax({
+            type: 'POST',
+            url: wmhObj.ajaxurl,
+            data: {
+                action: 'bulk_action_trash_to_restore',
+                bulk_action_val: bulk_action_val,
+                chek_box_val: chek_box_val,
+                nonce: wmhObj.nonce,
+                size: sizes
+            },
+            success: function (data) {
+                var data = JSON.parse(data);
+                alert(data.message);
+                if (data.flg == '1') {
+                    location.reload();
+                }
+            }
+        });
+    } else if (bulk_action_val != '' && bulk_action_val == 'delete') {
+        var chek_box_val = jQuery.map(jQuery('.single-check-image:checked'), function (n, i) {
+            return n.value;
+        });
+        var sizes = []
+        /* get size*/
+        jQuery('.single-check-image:checked').each(function () {
+            var size = jQuery(this).data('size');
+            sizes.push(size);
+        });
+        jQuery.ajax({
+            type: 'POST',
+            url: wmhObj.ajaxurl,
+            data: {
+                action: 'bulk_action_delete',
+                bulk_action_val: bulk_action_val,
+                chek_box_val: chek_box_val,
+                size: sizes,
+                nonce: wmhObj.nonce
             },
             success: function (data) {
                 var data = JSON.parse(data);
@@ -607,10 +722,10 @@ jQuery("#mh-analytics-switch").on('change', function (e) {
 
 
 /* Delete page media button */
-jQuery(document).on("click", "#delete-page-media-button", function (e) {
+jQuery(document).on("click", "#trash-page-media-button", function (e) {
     e.preventDefault();
-    if (confirm(wmhObj.msg_array.delete_page_confirm_1)) {
-        if (confirm(wmhObj.msg_array.delete_page_confirm_2)) {
+    if (confirm(wmhObj.msg_array.trash_page_confirm_1)) {
+        if (confirm(wmhObj.msg_array.trash_page_confirm_2)) {
             /* Disable and unclickable delete all media button. */
             jQuery('#delete-all-media-button').attr('disabled', 'disabled');
             jQuery('#delete-all-media-button').css('cursor', 'not-allowed')
@@ -618,18 +733,18 @@ jQuery(document).on("click", "#delete-page-media-button", function (e) {
             jQuery('#scan-button').attr('disabled', 'disabled');
             jQuery('#scan-button').css('cursor', 'not-allowed');
             /* Disable and unclickable delete-page-media-button  */
-            jQuery('#delete-page-media-button').attr('disabled', 'disabled');
-            jQuery('#delete-page-media-button').css('cursor', 'not-allowed');
+            jQuery('#trash-page-media-button').attr('disabled', 'disabled');
+            jQuery('#trash-page-media-button').css('cursor', 'not-allowed');
             /* Disable and unclickable download page media button */
             jQuery('#create-page-zip-button').attr('disabled', 'disabled');
             jQuery('#create-page-zip-button').css('cursor', 'not-allowed');
-            var data = jQuery("#wmh-delete-page-media-form").serialize();
+            var data = jQuery("#wmh-trash-page-media-form").serialize();
             jQuery.ajax({
                 type: "POST",
                 url: wmhObj.ajaxurl,
                 data: data,
                 beforeSend: function () {
-                    jQuery(".delete-page-media-loader").css(
+                    jQuery(".trash-page-media-loader").css(
                         "display",
                         "inline-block"
                     );
@@ -648,11 +763,11 @@ jQuery(document).on("click", "#delete-page-media-button", function (e) {
                     jQuery('#scan-button').css('cursor', '');
                     jQuery('#delete-all-media-button').removeAttr('disabled');
                     jQuery('#delete-all-media-button').css('cursor', '');
-                    jQuery('#delete-page-media-button').removeAttr('disabled');
-                    jQuery('#delete-page-media-button').css('cursor', '');
+                    jQuery('#trash-page-media-button').removeAttr('disabled');
+                    jQuery('#trash-page-media-button').css('cursor', '');
                     jQuery('#create-page-zip-button').removeAttr('disabled');
                     jQuery('#create-page-zip-button').css('cursor', '');
-                    jQuery(".delete-page-media-loader").css("display", "none");
+                    jQuery(".trash-page-media-loader").css("display", "none");
                 },
             });
         }
@@ -798,3 +913,112 @@ jQuery(document).on('click', '#wmh-update-database', function (e) {
         },
     });
 });
+
+/* Bulk restore media */
+jQuery(document).on('click', '#wmh-bulk-restore-btn', function (e) {
+    e.preventDefault();
+    var data = jQuery('#wmh-bulk-restore-form').serialize();
+    fnWmhBulkTrashRestore(data);
+});
+
+function fnWmhBulkTrashRestore(data) {
+    jQuery.ajax({
+        type: 'POST',
+        url: wmhObj.ajaxurl,
+        data: data,
+        beforeSend: function () {
+            jQuery('.bulk-restore-loader').css('display', 'inline-block');
+            jQuery('.wmh-bulk-restore-progress-bar').css('display', 'flex');
+            jQuery('.wmh-bulk-restore-message').css('display', 'inline-block').text('Restoring ... (1/2)');
+        },
+        success: function (res) {
+            var res = JSON.parse(res);
+            var progressBar = res.progress_bar;
+            jQuery('.wmh-bulk-restore-progress-bar div').text(progressBar + '%').css('width', progressBar + '%');
+            if (res.flg == 0) {
+                alert(res.message);
+                location.reload();
+            } else if (res.flg == 1) {
+                var ajax_call = res.ajax_call;
+                jQuery('#wmh-bulk-restore-ajax-call').val(ajax_call);
+                var data = jQuery('#wmh-bulk-restore-form').serialize();
+                fnWmhBulkTrashRestore(data);
+            } else if (res.flg == 2) {
+                alert(res.message);
+                jQuery('.bulk-restore-loader').css('display', 'none');
+                jQuery('.wmh-bulk-restore-message').text('Updating statistics information ... (2/2)');
+                let statisticsAjaxCall = 1;
+                fnFetchStatisticsData(statisticsAjaxCall);
+
+            }
+        },
+    });
+}
+
+function fn_wmh_delete_permanently_single_image(post_id = '', file_size = '') {
+    var data = {
+        action: 'delete_permanently_single_image_call',
+        post_id: post_id,
+        file_size: file_size,
+        nonce: wmhObj.nonce
+    };
+    jQuery.ajax({
+        type: 'POST',
+        url: wmhObj.ajaxurl,
+        data: data,
+        beforeSend: function () {
+            jQuery('.delete-loader-' + post_id + '').css('display', 'inline-block');
+        },
+        success: function (data) {
+            var data = JSON.parse(data);
+            alert(data.message);
+            if (data.flg == '1') {
+                location.reload();
+            }
+        },
+        complete: function (data) {
+            jQuery('.delete-loader-' + post_id + '').css('display', 'none');
+        }
+    });
+}
+
+/* delete permanently */
+jQuery(document).on('click', '#wmh-delete-permanently-btn', function (e) {
+    e.preventDefault();
+    var data = jQuery('#wmh-delete-permanently-form').serialize();
+    fnWmhBulkDeletePermanently(data);
+});
+
+function fnWmhBulkDeletePermanently(data) {
+    jQuery.ajax({
+        type: 'POST',
+        url: wmhObj.ajaxurl,
+        data: data,
+        beforeSend: function () {
+            jQuery('.bulk-delete-permanently-loader').css('display', 'inline-block');
+            jQuery('.wmh-delete-permanently-progress-bar').css('display', 'flex');
+            jQuery('.wmh-delete-permanently-message').css('display', 'inline-block').text('Deleting ... (1/2)');
+        },
+        success: function (res) {
+            var res = JSON.parse(res);
+            var progressBar = res.progress_bar;
+            jQuery('.wmh-delete-permanently-progress-bar div').text(progressBar + '%').css('width', progressBar + '%');
+            if (res.flg == 0) {
+                alert(res.message);
+                location.reload();
+            } else if (res.flg == 1) {
+                var ajax_call = res.ajax_call;
+                jQuery('#wmh-delete-permanently-ajax-call').val(ajax_call);
+                var data = jQuery('#wmh-delete-permanently-form').serialize();
+                fnWmhBulkDeletePermanently(data);
+            } else if (res.flg == 2) {
+                alert(res.message);
+                jQuery('.bulk-delete-permanently-loader').css('display', 'none');
+                jQuery('.wmh-bulk-delete-permanently-message').text('Updating statistics information ... (2/2)');
+                let statisticsAjaxCall = 1;
+                fnFetchStatisticsData(statisticsAjaxCall);
+
+            }
+        },
+    });
+}

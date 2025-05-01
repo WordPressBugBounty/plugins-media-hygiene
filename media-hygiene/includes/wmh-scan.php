@@ -267,6 +267,15 @@ class wmh_scan
 
 	public function fn_wmh_fetch_data_from_database()
 	{
+		if (!current_user_can('manage_options')) {
+			return false;
+		}
+
+		/* check nonce here. */
+		$wp_nonce = sanitize_text_field($_POST['nonce']);
+		if (!wp_verify_nonce($wp_nonce, 'media_hygiene_nonce')) {
+			die(esc_html(__('Security check. Hacking not allowed', MEDIA_HYGIENE)));
+		}
 
 		/* default response */
 		$flg = 0;
@@ -567,6 +576,14 @@ class wmh_scan
 
 	public function fn_wmh_scanning_data()
 	{
+
+		if (!current_user_can('manage_options')) {
+			return false;
+		}
+
+		if (!isset($_POST['nonce']) || !wp_verify_nonce(sanitize_text_field($_POST['nonce']), 'media_hygiene_nonce')) {
+			wp_die(esc_html(__('Security check failed. Hacking attempt detected.', MEDIA_HYGIENE)));
+		}
 
 		/* default response */
 		$flg = 0;
@@ -1118,7 +1135,7 @@ class wmh_scan
 
 		$wp_nonce = isset($_POST["nonce"]) ? sanitize_text_field($_POST["nonce"]) : '';
 		if (!wp_verify_nonce($wp_nonce, "media_hygiene_nonce")) {
-			die(__("Security check. Hacking not allowed", MEDIA_HYGIENE_PRO));
+			die(__("Security check. Hacking not allowed", MEDIA_HYGIENE));
 		}
 
 		if (isset($_POST['action']) && sanitize_text_field($_POST['action']) == 'row_action_trash') {
@@ -1273,6 +1290,14 @@ class wmh_scan
 	/* whitelist media. */
 	public function fn_wmh_whitelist_single_image_call()
 	{
+		if (!current_user_can('manage_options')) {
+			return false;
+		}
+
+
+		if (!isset($_POST['nonce']) || !wp_verify_nonce(sanitize_text_field($_POST['nonce']), 'media_hygiene_nonce')) {
+			wp_die(esc_html(__('Security check failed. Hacking attempt detected.', MEDIA_HYGIENE)));
+		}
 
 		if (isset($_POST['action']) && sanitize_text_field($_POST['action']) == 'whitelist_single_image_call') {
 
@@ -1331,6 +1356,13 @@ class wmh_scan
 	/* blacklist media. */
 	public function fn_wmh_blacklist_single_image_call()
 	{
+		if (!current_user_can('manage_options')) {
+			return false;
+		}
+
+		if (!isset($_POST['nonce']) || !wp_verify_nonce(sanitize_text_field($_POST['nonce']), 'media_hygiene_nonce')) {
+			wp_die(esc_html(__('Security check failed. Hacking attempt detected.', MEDIA_HYGIENE)));
+		}
 
 		if (isset($_POST['action']) && sanitize_text_field($_POST['action'] == 'blacklist_single_image_call')) {
 
@@ -1392,6 +1424,14 @@ class wmh_scan
 
 	public function fn_wmh_filter_data_ajax_call()
 	{
+		if (!current_user_can('manage_options')) {
+			return false;
+		}
+
+		if (!isset($_POST['nonce']) || !wp_verify_nonce(sanitize_text_field($_POST['nonce']), 'media_hygiene_nonce')) {
+			wp_die(esc_html(__('Security check failed. Hacking attempt detected.', MEDIA_HYGIENE)));
+		}
+
 		$list_element = '';
 
 		if (sanitize_text_field($_POST['list_element']) == 'blacklist') {
@@ -1626,6 +1666,13 @@ class wmh_scan
 
 	public function fn_wmh_bulk_action_to_whitelist()
 	{
+		if (!current_user_can('manage_options')) {
+			return false;
+		}
+
+		if (!isset($_POST['nonce']) || !wp_verify_nonce(sanitize_text_field($_POST['nonce']), 'media_hygiene_nonce')) {
+			wp_die(esc_html(__('Security check failed. Hacking attempt detected.', MEDIA_HYGIENE)));
+		}
 
 		if (isset($_POST['action']) && sanitize_text_field($_POST['action']) == 'bulk_action_to_whitelist') {
 			if (isset($_POST['bulk_action_val']) && sanitize_text_field($_POST['bulk_action_val']) == 'whitelist') {
@@ -1671,6 +1718,14 @@ class wmh_scan
 
 	public function fn_wmh_bulk_action_to_blacklist()
 	{
+
+		if (!current_user_can('manage_options')) {
+			return false;
+		}
+
+		if (!isset($_POST['nonce']) || !wp_verify_nonce(sanitize_text_field($_POST['nonce']), 'media_hygiene_nonce')) {
+			wp_die(esc_html(__('Security check failed. Hacking attempt detected.', MEDIA_HYGIENE)));
+		}
 
 		if (isset($_POST['action']) && sanitize_text_field($_POST['action']) == 'bulk_action_to_blacklist') {
 			if (isset($_POST['bulk_action_val']) && sanitize_text_field($_POST['bulk_action_val']) == 'blacklist') {
@@ -2273,6 +2328,14 @@ class wmh_scan
 
 	public function fn_wmh_fetch_data_from_elementor()
 	{
+		if (!current_user_can('manage_options')) {
+			return false;
+		}
+
+		if (!isset($_POST['nonce']) || !wp_verify_nonce(sanitize_text_field($_POST['nonce']), 'media_hygiene_nonce')) {
+			wp_die(esc_html(__('Security check failed. Hacking attempt detected.', MEDIA_HYGIENE)));
+		}
+
 		$all_plugins = get_plugins();
 		$ajax_call = (int) sanitize_text_field($_POST['ajax_call']);
 		$progress_bar = sanitize_text_field($_POST['progress_bar']);

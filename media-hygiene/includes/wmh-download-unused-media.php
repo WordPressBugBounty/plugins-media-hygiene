@@ -93,7 +93,13 @@ class wmh_download_unused_media
 
         $checked_file_path = $basedir . '/' . $media_hygiene_dir . '/' . $filename . '';
         if (file_exists($checked_file_path)) {
-            $dir_space = disk_free_space("/");
+            if (function_exists('disk_free_space')) {
+                    $dir_space = disk_free_space($basedir);
+                } else {
+                    $goback_url = sanitize_url(admin_url('admin.php?page=wmh-media-hygiene'));
+                    echo '<a href="' . esc_url($goback_url) . '">' . esc_html(__('Go back', MEDIA_HYGIENE)) . '</a><br><br>';
+                    die(esc_html__('The disk space check function is not available on this server. This may be due to hosting restrictions or disabled system functions. Please contact your hosting provider for assistance.', MEDIA_HYGIENE));
+                }
             $filesize = filesize($checked_file_path);
             if ($filesize < $dir_space) {
                 header('Content-type: application/zip');

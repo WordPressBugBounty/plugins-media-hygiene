@@ -120,7 +120,8 @@ function fnFetchDataFromDatabase(fetchDataAjaxCall = '', fetchDataProgressBar = 
     let data = {
         action: 'fetch_data_from_database',
         ajax_call: fetchDataAjaxCall,
-        progress_bar: fetchDataProgressBar
+        progress_bar: fetchDataProgressBar,
+        nonce: wmhObj.nonce
     }
 
     jQuery.ajax({
@@ -167,7 +168,8 @@ function fnSpecialProcessForElementor(ajax_call = '', elementor_ajax_call = '', 
     let data = {
         action: 'fetch_data_from_elementor',
         ajax_call: elementor_ajax_call,
-        progress_bar: progress_bar_width
+        progress_bar: progress_bar_width,
+        nonce: wmhObj.nonce
     }
     jQuery.ajax({
         type: 'POST',
@@ -196,7 +198,8 @@ function fnScanningDataAjaxCall(scanningDataAjaxCall = '', progressBar = '') {
     let data = {
         action: 'scanning_data',
         ajax_call: scanningDataAjaxCall,
-        progress_bar: progressBar
+        progress_bar: progressBar,
+        nonce: wmhObj.nonce
     }
     jQuery.ajax({
         type: 'POST',
@@ -237,6 +240,7 @@ function fnFetchStatisticsData(statisticsAjaxCall = '') {
     let data = {
         action: 'fetch_statistics_data',
         statistics_ajax_call: statisticsAjaxCall,
+        nonce: wmhObj.nonce
     }
     jQuery.ajax({
         type: 'POST',
@@ -334,6 +338,7 @@ function fn_wmh_whitelist_single_image(post_id) {
     var data = {
         action: 'whitelist_single_image_call',
         post_id: post_id,
+        nonce: wmhObj.nonce
     };
     jQuery.ajax({
         type: 'POST',
@@ -373,6 +378,7 @@ function fn_wmh_blacklist_single_image(post_id) {
     var data = {
         action: 'blacklist_single_image_call',
         post_id: post_id,
+        nonce: wmhObj.nonce
     };
     jQuery.ajax({
         type: 'POST',
@@ -519,6 +525,7 @@ jQuery(document).on('click', '#filter-submit', function (e) {
         attachment_cat: attachment_cat,
         date: date,
         list_element: list_element,
+        nonce: wmhObj.nonce
     }
     jQuery.ajax({
         type: 'POST',
@@ -577,7 +584,8 @@ jQuery(document).on('click', '#doaction', function () {
             data: {
                 action: 'bulk_action_to_whitelist',
                 bulk_action_val: bulk_action_val,
-                chek_box_val: chek_box_val
+                chek_box_val: chek_box_val,
+                nonce: wmhObj.nonce
             },
             success: function (data) {
                 var data = JSON.parse(data);
@@ -597,7 +605,8 @@ jQuery(document).on('click', '#doaction', function () {
             data: {
                 action: 'bulk_action_to_blacklist',
                 bulk_action_val: bulk_action_val,
-                chek_box_val: chek_box_val
+                chek_box_val: chek_box_val,
+                nonce: wmhObj.nonce
             },
             success: function (data) {
                 var data = JSON.parse(data);
@@ -698,7 +707,8 @@ jQuery("#mh-analytics-switch").on('change', function (e) {
     }
     var data = {
         action: 'send_data_to_server_action',
-        switch_status: switch_status
+        switch_status: switch_status,
+        nonce: wmhObj.nonce
     };
     jQuery.ajax({
         type: "POST",
@@ -868,7 +878,8 @@ jQuery(document).on('click', '#wmh-aap-btn', function (e) {
         type: "POST",
         url: wmhObj.ajaxurl,
         data: {
-            action: 'wmh_aap_action'
+            action: 'wmh_aap_action',
+            nonce: wmhObj.nonce
         },
         success: function (res) {
             var res = JSON.parse(res);
@@ -885,7 +896,8 @@ jQuery(document).on("click", ".analyzing-notice .notice-dismiss", function (e) {
         type: "POST",
         url: wmhObj.ajaxurl,
         data: {
-            action: 'wmh_aap_close_notice_permanently_action'
+            action: 'wmh_aap_close_notice_permanently_action',
+            nonce: wmhObj.nonce
         },
         success: function (res) {
             //var res = JSON.parse(res);

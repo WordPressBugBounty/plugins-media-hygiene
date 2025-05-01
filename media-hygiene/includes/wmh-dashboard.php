@@ -46,6 +46,14 @@ class wmh_dashboard
 
     public function fn_wmh_fetch_statistics_data()
     {
+        if (!current_user_can('manage_options')) {
+            return false;
+        }
+
+        if (!isset($_POST['nonce']) || !wp_verify_nonce(sanitize_text_field($_POST['nonce']), 'media_hygiene_nonce')) {
+            wp_die(esc_html(__('Security check failed. Hacking attempt detected.', MEDIA_HYGIENE)));
+        }
+
         $flg = 0;
 
         /* check ajax call number */
@@ -385,6 +393,14 @@ class wmh_dashboard
     public function fn_wmh_aap_action()
     {
 
+        if (!current_user_can('manage_options')) {
+            return false;
+        }
+
+        if (!isset($_POST['nonce']) || !wp_verify_nonce(sanitize_text_field($_POST['nonce']), 'media_hygiene_nonce')) {
+            wp_die(esc_html(__('Security check failed. Hacking attempt detected.', MEDIA_HYGIENE)));
+        }
+
         /* default */
         $flg = 0;
         $message = __('Something is wrong', MEDIA_HYGIENE);
@@ -408,6 +424,13 @@ class wmh_dashboard
 
     public function fn_wmh_aap_close_notice_permanently_action()
     {
+        if (!current_user_can('manage_options')) {
+            return false;
+        }
+
+        if (!isset($_POST['nonce']) || !wp_verify_nonce(sanitize_text_field($_POST['nonce']), 'media_hygiene_nonce')) {
+            wp_die(esc_html(__('Security check failed. Hacking attempt detected.', MEDIA_HYGIENE)));
+        }
 
         if (isset($_POST['action']) && $_POST['action'] == 'wmh_aap_close_notice_permanently_action') {
             update_option('wmh_close_analytics_permission_permanently', 'Yes');

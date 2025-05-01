@@ -108,6 +108,14 @@ class wmh_settings
 
     public function fn_wmh_send_data_to_server_action()
     {
+        if (!current_user_can('manage_options')) {
+            return false;
+        }
+
+        if (!isset($_POST['nonce']) || !wp_verify_nonce(sanitize_text_field($_POST['nonce']), 'media_hygiene_nonce')) {
+            wp_die(esc_html(__('Security check failed. Hacking attempt detected.', MEDIA_HYGIENE)));
+        }
+
         $output = array();
         if (isset($_POST['action']) && $_POST['action'] == 'send_data_to_server_action') {
 

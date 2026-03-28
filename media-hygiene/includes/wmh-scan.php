@@ -84,7 +84,7 @@ class wmh_scan
 	public function fn_wmh_scan_unused_images()
 	{
 		if (!current_user_can('manage_options')) {
-			return false;
+			wp_send_json_error(null, 403);
 		}
 
 		/* check nonce here. */
@@ -268,7 +268,7 @@ class wmh_scan
 	public function fn_wmh_fetch_data_from_database()
 	{
 		if (!current_user_can('manage_options')) {
-			return false;
+			wp_send_json_error(null, 403);
 		}
 
 		/* check nonce here. */
@@ -491,7 +491,7 @@ class wmh_scan
 	public function fn_wmh_get_save_content_data($mh_key = '')
 	{
 		$content = array();
-		$sql = ' SELECT wmh_value FROM ' . $this->wmh_save_scan_content . ' WHERE wmh_key = "' . $mh_key . '" ';
+		$sql = $this->conn->prepare('SELECT wmh_value FROM ' . $this->wmh_save_scan_content . ' WHERE wmh_key = %s', $mh_key);
 		$data = $this->conn->get_row($sql, ARRAY_A);
 		if (isset($data['wmh_value'])) {
 			$content = json_decode($data['wmh_value'], true);
@@ -578,7 +578,7 @@ class wmh_scan
 	{
 
 		if (!current_user_can('manage_options')) {
-			return false;
+			wp_send_json_error(null, 403);
 		}
 
 		if (!isset($_POST['nonce']) || !wp_verify_nonce(sanitize_text_field($_POST['nonce']), 'media_hygiene_nonce')) {
@@ -644,7 +644,7 @@ class wmh_scan
 		/* get elementor data, with post and page content build by elementor including prime slider addons */
 		$mh_key = 'wmh_elementor_data';
 		$elementor_result = array();
-		$sql = ' SELECT wmh_value FROM ' . $this->wmh_save_scan_content . ' WHERE wmh_key = "' . $mh_key . '" ';
+		$sql = $this->conn->prepare('SELECT wmh_value FROM ' . $this->wmh_save_scan_content . ' WHERE wmh_key = %s', $mh_key);
 		$elementor_content = $this->conn->get_results($sql, ARRAY_A);
 		if (!empty($elementor_content)) {
 			foreach ($elementor_content as $ec) {
@@ -1130,12 +1130,12 @@ class wmh_scan
 	public function fn_wmh_row_action_trash()
 	{
 		if (!current_user_can('manage_options')) {
-			return false;
+			wp_send_json_error(null, 403);
 		}
 
 		$wp_nonce = isset($_POST["nonce"]) ? sanitize_text_field($_POST["nonce"]) : '';
 		if (!wp_verify_nonce($wp_nonce, "media_hygiene_nonce")) {
-			die(__("Security check. Hacking not allowed", MEDIA_HYGIENE));
+			wp_die(esc_html__('Security check. Hacking not allowed', MEDIA_HYGIENE), '', array('response' => 403));
 		}
 
 		if (isset($_POST['action']) && sanitize_text_field($_POST['action']) == 'row_action_trash') {
@@ -1191,7 +1191,7 @@ class wmh_scan
 	{
 
 		if (!current_user_can('manage_options')) {
-			return false;
+			wp_send_json_error(null, 403);
 		}
 
 		/* check nonce here. */
@@ -1291,7 +1291,7 @@ class wmh_scan
 	public function fn_wmh_whitelist_single_image_call()
 	{
 		if (!current_user_can('manage_options')) {
-			return false;
+			wp_send_json_error(null, 403);
 		}
 
 
@@ -1303,9 +1303,9 @@ class wmh_scan
 
 			if (isset($_POST['post_id']) && $_POST['post_id'] != '') {
 
-				$post_id = sanitize_text_field($_POST['post_id']);
+				$post_id = (int) sanitize_text_field($_POST['post_id']);
 				$whitelist_posts_result = array();
-				$whitelist_posts_sql = 'SELECT * FROM ' . $this->wmh_unused_media_post_id . ' WHERE post_id = "' . $post_id . '"';
+				$whitelist_posts_sql = $this->conn->prepare('SELECT * FROM ' . $this->wmh_unused_media_post_id . ' WHERE post_id = %d', $post_id);
 				$whitelist_posts_result = $this->conn->get_row($whitelist_posts_sql, ARRAY_A);
 				$whitelist_posts_result['id'] = '';
 				$whitelist_post_id_inserted = $this->conn->insert($this->wmh_whitelist_media_post_id, $whitelist_posts_result);
@@ -1357,7 +1357,7 @@ class wmh_scan
 	public function fn_wmh_blacklist_single_image_call()
 	{
 		if (!current_user_can('manage_options')) {
-			return false;
+			wp_send_json_error(null, 403);
 		}
 
 		if (!isset($_POST['nonce']) || !wp_verify_nonce(sanitize_text_field($_POST['nonce']), 'media_hygiene_nonce')) {
@@ -1368,9 +1368,9 @@ class wmh_scan
 
 			if (isset($_POST['post_id']) && $_POST['post_id'] != '') {
 
-				$post_id = sanitize_text_field($_POST['post_id']);
+				$post_id = (int) sanitize_text_field($_POST['post_id']);
 				$whitelist_posts_result = array();
-				$whitelist_posts_sql = 'SELECT * FROM ' . $this->wmh_whitelist_media_post_id . ' WHERE post_id = "' . $post_id . '"';
+				$whitelist_posts_sql = $this->conn->prepare('SELECT * FROM ' . $this->wmh_whitelist_media_post_id . ' WHERE post_id = %d', $post_id);
 				$whitelist_posts_result = $this->conn->get_row($whitelist_posts_sql, ARRAY_A);
 				$whitelist_posts_result['id'] = '';
 				$whitelist_post_id_inserted = $this->conn->insert($this->wmh_unused_media_post_id, $whitelist_posts_result);
@@ -1425,7 +1425,7 @@ class wmh_scan
 	public function fn_wmh_filter_data_ajax_call()
 	{
 		if (!current_user_can('manage_options')) {
-			return false;
+			wp_send_json_error(null, 403);
 		}
 
 		if (!isset($_POST['nonce']) || !wp_verify_nonce(sanitize_text_field($_POST['nonce']), 'media_hygiene_nonce')) {
@@ -1488,12 +1488,12 @@ class wmh_scan
 	public function fn_wmh_bulk_action_trash()
 	{
 		if (!current_user_can('manage_options')) {
-			return false;
+			wp_send_json_error(null, 403);
 		}
 
 		$wp_nonce = isset($_POST["nonce"]) ? sanitize_text_field($_POST["nonce"]) : '';
 		if (!wp_verify_nonce($wp_nonce, "media_hygiene_nonce")) {
-			die(__("Security check. Hacking not allowed", MEDIA_HYGIENE));
+			wp_die(esc_html__('Security check. Hacking not allowed', MEDIA_HYGIENE), '', array('response' => 403));
 		}
 
 		$trashed_display_size = array();
@@ -1667,7 +1667,7 @@ class wmh_scan
 	public function fn_wmh_bulk_action_to_whitelist()
 	{
 		if (!current_user_can('manage_options')) {
-			return false;
+			wp_send_json_error(null, 403);
 		}
 
 		if (!isset($_POST['nonce']) || !wp_verify_nonce(sanitize_text_field($_POST['nonce']), 'media_hygiene_nonce')) {
@@ -1680,13 +1680,13 @@ class wmh_scan
 				$size = array();
 				$media_size_array = array();
 				foreach ($chek_box_val as $d_id) {
-					$sql = 'SELECT * FROM ' . $this->wmh_unused_media_post_id . ' WHERE post_id="' . $d_id . '"';
+					$sql = $this->conn->prepare('SELECT * FROM ' . $this->wmh_unused_media_post_id . ' WHERE post_id = %d', (int) $d_id);
 					$data = $this->conn->get_row($sql, ARRAY_A);
 					$data['id'] = '';
 					if (isset($data) && !empty($data)) {
 						$whitelist_post_id_inserted = $this->conn->insert($this->wmh_whitelist_media_post_id, $data);
 						if ($whitelist_post_id_inserted) {
-							$deleted = $this->conn->delete($this->wmh_unused_media_post_id, array('post_id' => $d_id));
+							$deleted = $this->conn->delete($this->wmh_unused_media_post_id, array('post_id' => (int) $d_id));
 							if (isset($data['size'])) {
 								$size = $data['size'];
 							}
@@ -1720,7 +1720,7 @@ class wmh_scan
 	{
 
 		if (!current_user_can('manage_options')) {
-			return false;
+			wp_send_json_error(null, 403);
 		}
 
 		if (!isset($_POST['nonce']) || !wp_verify_nonce(sanitize_text_field($_POST['nonce']), 'media_hygiene_nonce')) {
@@ -1733,13 +1733,13 @@ class wmh_scan
 				$size = array();
 				$media_size_array = array();
 				foreach ($chek_box_val as $d_id) {
-					$sql = 'SELECT * FROM ' . $this->wmh_whitelist_media_post_id . ' WHERE post_id="' . $d_id . '"';
+					$sql = $this->conn->prepare('SELECT * FROM ' . $this->wmh_whitelist_media_post_id . ' WHERE post_id = %d', (int) $d_id);
 					$data = $this->conn->get_row($sql, ARRAY_A);
 					$data['id'] = '';
 					if (isset($data) && !empty($data)) {
 						$whitelist_post_id_inserted = $this->conn->insert($this->wmh_unused_media_post_id, $data);
 						if ($whitelist_post_id_inserted) {
-							$deleted = $this->conn->delete($this->wmh_whitelist_media_post_id, array('post_id' => $d_id));
+							$deleted = $this->conn->delete($this->wmh_whitelist_media_post_id, array('post_id' => (int) $d_id));
 							if (isset($data['size'])) {
 								$size = $data['size'];
 							}
@@ -1829,12 +1829,12 @@ class wmh_scan
 	public function fn_wmh_bulk_action_trash_to_restore()
 	{
 		if (!current_user_can('manage_options')) {
-			return false;
+			wp_send_json_error(null, 403);
 		}
 
 		$wp_nonce = isset($_POST["nonce"]) ? sanitize_text_field($_POST["nonce"]) : '';
 		if (!wp_verify_nonce($wp_nonce, "media_hygiene_nonce")) {
-			die(__("Security check. Hacking not allowed", MEDIA_HYGIENE));
+			wp_die(esc_html__('Security check. Hacking not allowed', MEDIA_HYGIENE), '', array('response' => 403));
 		}
 
 		$flg = 0;
@@ -1932,12 +1932,12 @@ class wmh_scan
 	{
 
 		if (!current_user_can('manage_options')) {
-			return false;
+			wp_send_json_error(null, 403);
 		}
 
 		$wp_nonce = isset($_POST["nonce"]) ? sanitize_text_field($_POST["nonce"]) : '';
 		if (!wp_verify_nonce($wp_nonce, "media_hygiene_nonce")) {
-			die(__("Security check. Hacking not allowed", MEDIA_HYGIENE));
+			wp_die(esc_html__('Security check. Hacking not allowed', MEDIA_HYGIENE), '', array('response' => 403));
 		}
 
 		$flg = 0;
@@ -2019,12 +2019,12 @@ class wmh_scan
 	public function fn_wmh_bulk_restore()
 	{
 		if (!current_user_can('manage_options')) {
-			return false;
+			wp_send_json_error(null, 403);
 		}
 
 		$wp_nonce = isset($_POST["nonce"]) ? sanitize_text_field($_POST["nonce"]) : '';
 		if (!wp_verify_nonce($wp_nonce, "wmh_bulk_restore")) {
-			die(__("Security check. Hacking not allowed", MEDIA_HYGIENE));
+			wp_die(esc_html__('Security check. Hacking not allowed', MEDIA_HYGIENE), '', array('response' => 403));
 		}
 
 		$ajax_call = (int) sanitize_text_field($_POST['ajax_call']);
@@ -2134,12 +2134,12 @@ class wmh_scan
 	public function fn_wmh_delete_permanently_single_image_call()
 	{
 		if (!current_user_can('manage_options')) {
-			return false;
+			wp_send_json_error(null, 403);
 		}
 
 		$wp_nonce = isset($_POST["nonce"]) ? sanitize_text_field($_POST["nonce"]) : '';
 		if (!wp_verify_nonce($wp_nonce, "media_hygiene_nonce")) {
-			die(__("Security check. Hacking not allowed", MEDIA_HYGIENE));
+			wp_die(esc_html__('Security check. Hacking not allowed', MEDIA_HYGIENE), '', array('response' => 403));
 		}
 
 		$flg = 0;
@@ -2189,12 +2189,12 @@ class wmh_scan
 	public function fn_wmh_bulk_action_delete()
 	{
 		if (!current_user_can('manage_options')) {
-			return false;
+			wp_send_json_error(null, 403);
 		}
 
 		$wp_nonce = isset($_POST["nonce"]) ? sanitize_text_field($_POST["nonce"]) : '';
 		if (!wp_verify_nonce($wp_nonce, "media_hygiene_nonce")) {
-			die(__("Security check. Hacking not allowed", MEDIA_HYGIENE));
+			wp_die(esc_html__('Security check. Hacking not allowed', MEDIA_HYGIENE), '', array('response' => 403));
 		}
 
 		$deleted_display_size = array();
@@ -2256,12 +2256,12 @@ class wmh_scan
 	{
 
 		if (!current_user_can('manage_options')) {
-			return false;
+			wp_send_json_error(null, 403);
 		}
 
 		$wp_nonce = isset($_POST["nonce"]) ? sanitize_text_field($_POST["nonce"]) : '';
 		if (!wp_verify_nonce($wp_nonce, "wmh_delete_permanently")) {
-			die(__("Security check. Hacking not allowed", MEDIA_HYGIENE));
+			wp_die(esc_html__('Security check. Hacking not allowed', MEDIA_HYGIENE), '', array('response' => 403));
 		}
 
 		$ajax_call = (int) sanitize_text_field($_POST['ajax_call']);
@@ -2329,7 +2329,7 @@ class wmh_scan
 	public function fn_wmh_fetch_data_from_elementor()
 	{
 		if (!current_user_can('manage_options')) {
-			return false;
+			wp_send_json_error(null, 403);
 		}
 
 		if (!isset($_POST['nonce']) || !wp_verify_nonce(sanitize_text_field($_POST['nonce']), 'media_hygiene_nonce')) {

@@ -47,7 +47,7 @@ class wmh_dashboard
     public function fn_wmh_fetch_statistics_data()
     {
         if (!current_user_can('manage_options')) {
-            return false;
+            wp_send_json_error(null, 403);
         }
 
         if (!isset($_POST['nonce']) || !wp_verify_nonce(sanitize_text_field($_POST['nonce']), 'media_hygiene_nonce')) {
@@ -394,7 +394,7 @@ class wmh_dashboard
     {
 
         if (!current_user_can('manage_options')) {
-            return false;
+            wp_send_json_error(null, 403);
         }
 
         if (!isset($_POST['nonce']) || !wp_verify_nonce(sanitize_text_field($_POST['nonce']), 'media_hygiene_nonce')) {
@@ -425,7 +425,7 @@ class wmh_dashboard
     public function fn_wmh_aap_close_notice_permanently_action()
     {
         if (!current_user_can('manage_options')) {
-            return false;
+            wp_send_json_error(null, 403);
         }
 
         if (!isset($_POST['nonce']) || !wp_verify_nonce(sanitize_text_field($_POST['nonce']), 'media_hygiene_nonce')) {
@@ -442,7 +442,7 @@ class wmh_dashboard
     {
 
         if (!current_user_can('manage_options')) {
-            return false;
+            wp_send_json_error(null, 403);
         }
 
         /* default */

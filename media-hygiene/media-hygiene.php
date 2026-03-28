@@ -4,7 +4,7 @@
 Plugin Name: Media Hygiene
 Plugin URI: https://mediahygiene.com/
 Description: A plugin to remove unused media from WordPress and free up space on hosting.
-Version: 4.0.1
+Version: 4.0.2
 Author: Media Hygiene
 Author URI: https://mediahygiene.com
 License: Custom license, no Distribution allowed
@@ -19,7 +19,7 @@ class media_hygiene
     {
         /* define */
         define('MEDIA_HYGIENE', 'media-hygiene');
-        define('MH_FILE_VERSION', '4.0.1');
+        define('MH_FILE_VERSION', '4.0.2');
         define('MH_PREFIX', 'wmh_');
         define('MH_FILE_PATH', plugin_dir_path(__FILE__));
         define('MH_FILE_URL', plugin_dir_url(__FILE__));

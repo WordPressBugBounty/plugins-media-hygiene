@@ -22,7 +22,7 @@ class wmh_settings
     {
 
         if (!current_user_can('manage_options')) {
-            return false;
+            wp_send_json_error(null, 403);
         }
 
         /* Check nonce here. */
@@ -109,7 +109,7 @@ class wmh_settings
     public function fn_wmh_send_data_to_server_action()
     {
         if (!current_user_can('manage_options')) {
-            return false;
+            wp_send_json_error(null, 403);
         }
 
         if (!isset($_POST['nonce']) || !wp_verify_nonce(sanitize_text_field($_POST['nonce']), 'media_hygiene_nonce')) {

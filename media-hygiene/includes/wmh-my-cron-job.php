@@ -175,21 +175,16 @@ class my_cron_job
         $wmh_end_time = get_option('wmh_end_time');
         $time_period = date('Y-m-d', strtotime($time));
         $attachments = array();
-        $query = $this->conn->prepare(
-            "
-            SELECT ID, post_mime_type 
-            FROM $this->wp_posts
-            WHERE post_type = %s 
-            AND post_status != %s 
-            AND post_date >= %s
-            AND post_date > %s
-            ",
-            'attachment',
-            'trash',
-            $time_period,
-            $wmh_end_time
-        );
 
+        $sql = "SELECT ID, post_mime_type FROM $this->wp_posts WHERE post_type = %s AND post_status != %s AND post_date >= %s";
+        $params = array('attachment', 'trash', $time_period);
+
+        if (!empty($wmh_end_time)) {
+            $sql .= ' AND post_date > %s';
+            $params[] = $wmh_end_time;
+        }
+
+        $query = $this->conn->prepare($sql, $params);
 
         $attachments = $this->conn->get_results($query, ARRAY_A);
         return $attachments;
@@ -201,8 +196,10 @@ class my_cron_job
         $total_count = count($attachments);
         $global_data = get_option('wmh_scan_option_data');
         if(isset($global_data) && isset($global_data['email_notification_send_to']) && $global_data['email_notification_send_to'] != ''){
-            $to = explode(',', $global_data['email_notification_send_to']);            
-            $to = $this->fn_mh_trim_array($to);            
+            $to_raw = explode(',', $global_data['email_notification_send_to']);
+            $to_raw = $this->fn_mh_trim_array($to_raw);
+            $to = array_filter($to_raw, 'is_email');
+            $to = array_values($to);
         }else{
             $to = get_option('admin_email');
         }
@@ -295,9 +292,9 @@ class my_cron_job
                         $guid = wp_get_attachment_url($id);
                     }
                     $message .= '<tr>';
-                    $message .= '<td>' . $no . '</td>';
-                    $message .= '<td>' . $guid . '</td>';
-                    $message .= '<td><a href="' . $guid . '" target="_blank"><img src="' . $guid . '" width="50" height="50"/></a></td>';
+                    $message .= '<td>' . (int) $no . '</td>';
+                    $message .= '<td>' . esc_url($guid) . '</td>';
+                    $message .= '<td><a href="' . esc_url($guid) . '" target="_blank"><img src="' . esc_url($guid) . '" width="50" height="50"/></a></td>';
                     $message .= '</tr>';
                     $i++;
                 } else {

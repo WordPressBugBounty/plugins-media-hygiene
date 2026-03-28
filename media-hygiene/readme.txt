@@ -6,8 +6,8 @@ Contributors: slui
 Tags: unused media, clean, delete, remove, images
 Requires at least: 5.3
 Requires PHP: 7.4
-Tested up to: 6.8.1
-Stable tag: 4.0.1
+Tested up to: 6.9.4
+Stable tag: 4.0.2
 License: Custom
 License URI: Custom license, no Distribution allowed
 

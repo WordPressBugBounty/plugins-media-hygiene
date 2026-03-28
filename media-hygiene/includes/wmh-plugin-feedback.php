@@ -14,7 +14,7 @@ class wmh_plugin_feedback
     public function fn_wmh_customer_feedback()
     {   
         if (!current_user_can('manage_options')) {
-			return false;
+			wp_send_json_error(null, 403);
 		}
         
         /* default */

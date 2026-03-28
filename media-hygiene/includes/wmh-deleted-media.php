@@ -31,6 +31,16 @@ class wmh_deleted_media
 
     public function fn_wmh_get_deleted_media_list()
     {
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error(null, 403);
+        }
+
+        /* check nonce here. */
+        $wp_nonce = sanitize_text_field($_POST['nonce']);
+        if (!wp_verify_nonce($wp_nonce, 'media_hygiene_nonce')) {
+            die(esc_html(__('Security check. Hacking not allowed', MEDIA_HYGIENE)));
+        }
+
         $data = array();
         $sql = 'SELECT * FROM ' . $this->wmh_deleted_media . ' ';
         $data = $this->conn->get_results($sql, ARRAY_A);
@@ -41,8 +51,8 @@ class wmh_deleted_media
     public function fn_wmh_deleted_media_list_action()
     {
         if (!current_user_can('manage_options')) {
-			return false;
-		}
+            wp_send_json_error(null, 403);
+        }
 
         /* check nonce here. */
         $wp_nonce = sanitize_text_field($_POST['nonce']);

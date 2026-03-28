@@ -21,7 +21,7 @@ class wmh_error_log
     public function fn_wmh_clear_error_log_action()
     {
         if (!current_user_can('manage_options')) {
-			return false;
+			wp_send_json_error(null, 403);
 		}
         
         /* check nonce here. */

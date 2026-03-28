@@ -24,13 +24,13 @@ class wmh_download_unused_media
     public function fn_wmh_create_page_unused_media_zip_action()
     {   
         if (!current_user_can('manage_options')) {
-			return false;
+			wp_die(esc_html__('Unauthorized', MEDIA_HYGIENE), '', array('response' => 403));
 		}
 
         /* check nonce */
         $nonce = sanitize_text_field($_POST['nonce']);
         if (!wp_verify_nonce($nonce, 'create_page_unused_media_zip_nonce')) {
-            die(esc_html(__('Security check. Hacking not allowed', MEDIA_HYGIENE)));
+            wp_die(esc_html__('Security check. Hacking not allowed', MEDIA_HYGIENE), '', array('response' => 403));
         }
 
         if (!extension_loaded('zip')) {
@@ -54,11 +54,11 @@ class wmh_download_unused_media
             $media_per_page_input = $wmh_scan_option_data['media_per_page_input'];
         }
 
-        $per_post = $media_per_page_input;
-        $current_page = sanitize_text_field($_POST['paged']);
+        $per_post = (int) $media_per_page_input;
+        $current_page = (int) sanitize_text_field($_POST['paged']);
         $offset = $per_post * ($current_page - 1);
 
-        $paged = sanitize_text_field($_POST['paged']);
+        $paged = $current_page;
 
         /* get unused media result */
         $unused_media_result = $this->fn_wmh_get_unused_media_result($offset, $per_post);
@@ -118,7 +118,7 @@ class wmh_download_unused_media
     {
 
         /* get all unused delete media post id from wmh_unused_media_post_id table for download media */
-        $unused_media_sql = 'SELECT post_id FROM ' . $this->wmh_unused_media_post_id . ' LIMIT ' . $per_post . ' OFFSET ' . $offset . ' ';
+        $unused_media_sql = $this->conn->prepare('SELECT post_id FROM ' . $this->wmh_unused_media_post_id . ' LIMIT %d OFFSET %d', $per_post, $offset);
         $unused_media_data = $this->conn->get_results($unused_media_sql, ARRAY_A);
         $unused_media_post_id = array();
         if (isset($unused_media_data) && !empty($unused_media_data)) {
@@ -137,8 +137,8 @@ class wmh_download_unused_media
 
         $original_url_array = array();
         if (!empty($unused_media_post_id)) {
-            $id = implode(',', $unused_media_post_id);
-            $get_original_url_sql = 'SELECT ID, guid, post_mime_type FROM ' . $this->wp_posts . ' WHERE ID IN(' . $id . ')';
+            $safe_ids = implode(',', array_map('intval', $unused_media_post_id));
+            $get_original_url_sql = 'SELECT ID, guid, post_mime_type FROM ' . $this->wp_posts . ' WHERE ID IN(' . $safe_ids . ')';
             $get_original_url_data = $this->conn->get_results($get_original_url_sql, ARRAY_A);
             if (isset($get_original_url_data) && !empty($get_original_url_data)) {
                 foreach ($get_original_url_data as $guid) {

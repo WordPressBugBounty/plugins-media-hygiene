@@ -832,6 +832,7 @@ function fnWmhDeletedMEdiaList() {
             url: wmhObj.ajaxurl,
             data: {
                 action: 'get_deleted_media_list',
+                nonce: wmhObj.nonce
             },
         },
         columns: [

@@ -3,18 +3,160 @@ img {
     max-width: 100%;
 }
 
+/* ── Action buttons ── */
 .wmh-btn {
-    min-width: 175px;
-    height: 36px;
-    line-height: 32px !important;
-    font-size: 12px;
+    min-width: 150px;
+    height: auto !important;
+    line-height: 1 !important;
+    font-size: 13px !important;
+    font-weight: 600 !important;
+    letter-spacing: 0.2px;
+    padding: 9px 16px !important;
+    border-radius: 6px !important;
+    border: none !important;
+    display: inline-flex !important;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    cursor: pointer;
+    transition: transform 0.15s ease, box-shadow 0.15s ease, filter 0.15s ease !important;
+    position: relative;
+    overflow: hidden;
+    text-decoration: none !important;
+    vertical-align: middle;
 }
 
+/* Click ripple */
+.wmh-btn::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: rgba(255, 255, 255, 0.18);
+    opacity: 0;
+    transition: opacity 0.18s;
+    pointer-events: none;
+}
+
+.wmh-btn:active::after {
+    opacity: 1;
+}
+
+/* Blue — Scan & Download */
+.button-primary.wmh-btn,
+.button-primary.wmh-btn:visited {
+    background: linear-gradient(135deg, #2271b1 0%, #135e96 100%) !important;
+    box-shadow: 0 2px 8px rgba(34, 113, 177, 0.32) !important;
+    color: #fff !important;
+    border-color: transparent !important;
+}
+
+.button-primary.wmh-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 18px rgba(34, 113, 177, 0.42) !important;
+    filter: brightness(1.08);
+    color: #fff !important;
+    border-color: transparent !important;
+}
+
+.button-primary.wmh-btn:active {
+    transform: translateY(0) scale(0.97);
+    box-shadow: 0 1px 5px rgba(34, 113, 177, 0.28) !important;
+}
+
+.button-primary.wmh-btn:focus {
+    outline: 2px solid rgba(34, 113, 177, 0.5) !important;
+    outline-offset: 2px;
+    box-shadow: 0 2px 8px rgba(34, 113, 177, 0.32) !important;
+}
+
+/* Disabled state — both blue and red buttons */
+.button-primary.wmh-btn:disabled,
+.button-primary.wmh-btn[disabled],
+.button-danger.wmh-btn:disabled,
+.button-danger.wmh-btn[disabled] {
+    background: #b0b3b8 !important;
+    background-image: none !important;
+    color: #fff !important;
+    box-shadow: none !important;
+    border-color: transparent !important;
+    transform: none !important;
+    filter: none !important;
+    opacity: 0.8;
+    cursor: not-allowed !important;
+}
+
+/* Red — Trash */
 .button-danger,
-.button-danger:hover {
-    background: red !important;
-    border-color: red !important;
+.button-danger:visited {
+    background: linear-gradient(135deg, #d63638 0%, #b32d2e 100%) !important;
+    box-shadow: 0 2px 8px rgba(214, 54, 56, 0.32) !important;
+    border-color: transparent !important;
     color: #ffffff !important;
+}
+
+.button-danger:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 18px rgba(214, 54, 56, 0.42) !important;
+    filter: brightness(1.08);
+    background: linear-gradient(135deg, #d63638 0%, #b32d2e 100%) !important;
+    border-color: transparent !important;
+    color: #fff !important;
+}
+
+.button-danger:active {
+    transform: translateY(0) scale(0.97);
+    box-shadow: 0 1px 5px rgba(214, 54, 56, 0.28) !important;
+}
+
+.button-danger:focus {
+    outline: 2px solid rgba(214, 54, 56, 0.5) !important;
+    outline-offset: 2px;
+}
+
+/* Icon slot — stacks static icon & spinner in same space */
+.wmh-btn-icon-slot {
+    position: relative;
+    width: 14px;
+    height: 14px;
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.wmh-btn-icon-slot i {
+    position: absolute;
+    font-size: 13px;
+}
+
+/* When spinner becomes visible it sits on top of the static icon */
+.wmh-btn-static-icon {
+    opacity: 1;
+    transition: opacity 0.15s;
+}
+
+/* Last scan time badge */
+.last-scan-time p {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 12px;
+    color: #50575e;
+    background: #fff;
+    padding: 6px 12px;
+    border-radius: 20px;
+    border: 1px solid #dcdcde;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+    margin: 0;
+    line-height: 1.3;
+}
+
+.last-scan-time p::before {
+    content: '\f017';
+    font-family: 'Font Awesome 6 Free';
+    font-weight: 900;
+    font-size: 11px;
+    color: #a0a5aa;
 }
 
 #wpcontent {
@@ -73,7 +215,7 @@ div.updated {
     display: flex;
     row-gap: 10px;
     flex-wrap: wrap;
-    column-gap: 25px;
+    column-gap: 12px;
     justify-content: start;
     align-items: center;
 }
@@ -593,6 +735,370 @@ ul.wmh-compatibility-notice li {
     margin: 0;
 }
 
+/************ Settings page redesign *********/
+
+.wmh-settings-tab-body {
+    padding: 24px 20px;
+}
+
+.wmh-settings-section {
+    margin-bottom: 28px;
+}
+
+.wmh-settings-section-label {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: #757575;
+    margin-bottom: 10px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid #e5e5e5;
+}
+
+/* Equal-height cards: make columns flex containers so height:100% works */
+.wmh-settings-section .row > [class*="col-"] {
+    display: -webkit-box;
+    display: -ms-flexbox;
+    display: flex;
+    -webkit-box-orient: vertical;
+    -webkit-box-direction: normal;
+    -ms-flex-direction: column;
+    flex-direction: column;
+}
+
+/* Base setting card — fills column height */
+.wmh-setting-card {
+    background: #fff;
+    border: 1px solid #dcdcde;
+    border-radius: 4px;
+    width: 100%;
+    -webkit-box-sizing: border-box;
+    box-sizing: border-box;
+    /* equal height within row */
+    -webkit-box-flex: 1;
+    -ms-flex: 1 0 auto;
+    flex: 1 0 auto;
+}
+
+.wmh-setting-card-header {
+    padding: 14px 16px 12px;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.wmh-setting-card-body {
+    padding: 16px;
+}
+
+/* Title row — margin-right fallback for Safari <14.1 which lacks flex gap */
+.wmh-setting-card-title {
+    display: -webkit-box;
+    display: -ms-flexbox;
+    display: flex;
+    -webkit-box-align: center;
+    -ms-flex-align: center;
+    align-items: center;
+    -ms-flex-wrap: wrap;
+    flex-wrap: wrap;
+    font-size: 13px;
+    font-weight: 600;
+    color: #1d2327;
+}
+
+.wmh-setting-card-title > * {
+    margin-right: 8px;
+}
+
+.wmh-setting-card-title > *:last-child {
+    margin-right: 0;
+}
+
+.wmh-setting-icon {
+    color: #2271b1;
+    font-size: 14px;
+    width: 16px;
+    text-align: center;
+    -ms-flex-negative: 0;
+    flex-shrink: 0;
+}
+
+.wmh-field-hint {
+    font-size: 12px;
+    color: #757575;
+    margin: 6px 0 0;
+}
+
+.wmh-field-label {
+    display: block;
+    font-size: 12px;
+    font-weight: 600;
+    color: #3c434a;
+    margin-bottom: 5px;
+}
+
+.wmh-text-link {
+    font-size: 12px;
+    text-decoration: none;
+    color: #2271b1;
+    display: inline-block;
+}
+
+.wmh-text-link:hover {
+    color: #135e96;
+    text-decoration: underline;
+}
+
+/* Toggle card variant */
+.wmh-setting-card-toggle {
+    padding: 14px 16px;
+}
+
+.wmh-setting-card-toggle-inner {
+    display: -webkit-box;
+    display: -ms-flexbox;
+    display: flex;
+    -webkit-box-pack: justify;
+    -ms-flex-pack: justify;
+    justify-content: space-between;
+    -webkit-box-align: center;
+    -ms-flex-align: center;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+/* Prevent toggle switch from being squashed on narrow screens */
+.wmh-setting-card-toggle-inner .wmh-setting-card-title {
+    -webkit-box-flex: 1;
+    -ms-flex: 1 1 auto;
+    flex: 1 1 auto;
+    min-width: 0;
+    padding-right: 12px;
+}
+
+.wmh-setting-card-toggle-inner .wmh-switch {
+    -ms-flex-negative: 0;
+    flex-shrink: 0;
+}
+
+.wmh-toggle-hint {
+    font-size: 12px;
+    color: #757575;
+    margin: 0;
+    line-height: 1.5;
+}
+
+/* Info card variant (no interactive controls) */
+.wmh-setting-card-info {
+    padding: 14px 16px;
+}
+
+/* Save row */
+.wmh-settings-save-row {
+    margin-bottom: 24px;
+    padding-top: 4px;
+}
+
+/* Pro upgrade banner */
+.wmh-pro-banner {
+    display: -webkit-box;
+    display: -ms-flexbox;
+    display: flex;
+    -webkit-box-align: center;
+    -ms-flex-align: center;
+    align-items: center;
+    -webkit-box-pack: justify;
+    -ms-flex-pack: justify;
+    justify-content: space-between;
+    background: -webkit-linear-gradient(315deg, #1d4ed8 0%, #2271b1 100%);
+    background: linear-gradient(135deg, #1d4ed8 0%, #2271b1 100%);
+    border-radius: 4px;
+    padding: 16px 20px;
+    margin-bottom: 20px;
+    -ms-flex-wrap: wrap;
+    flex-wrap: wrap;
+}
+
+/* margin fallback for Safari <14.1 flex gap */
+.wmh-pro-banner > * {
+    margin-right: 16px;
+    margin-bottom: 8px;
+}
+
+.wmh-pro-banner > *:last-child {
+    margin-right: 0;
+    margin-bottom: 0;
+}
+
+.wmh-pro-banner-text {
+    display: -webkit-box;
+    display: -ms-flexbox;
+    display: flex;
+    -webkit-box-orient: vertical;
+    -webkit-box-direction: normal;
+    -ms-flex-direction: column;
+    flex-direction: column;
+    color: #fff;
+    -webkit-box-flex: 1;
+    -ms-flex: 1 1 200px;
+    flex: 1 1 200px;
+    min-width: 0;
+}
+
+.wmh-pro-banner-text strong {
+    font-size: 14px;
+    color: #fff;
+    margin-bottom: 3px;
+    display: block;
+}
+
+.wmh-pro-banner-text span {
+    font-size: 12px;
+    color: rgba(255,255,255,0.85);
+}
+
+.wmh-pro-banner-btn {
+    display: inline-block;
+    background: #fff;
+    color: #1d4ed8;
+    font-size: 13px;
+    font-weight: 600;
+    padding: 8px 18px;
+    border-radius: 4px;
+    text-decoration: none;
+    white-space: nowrap;
+    -webkit-transition: background 0.15s, color 0.15s;
+    transition: background 0.15s, color 0.15s;
+    -ms-flex-negative: 0;
+    flex-shrink: 0;
+}
+
+.wmh-pro-banner-btn:hover,
+.wmh-pro-banner-btn:focus {
+    background: #f0f6ff;
+    color: #135e96;
+    text-decoration: none;
+}
+
+/* Scrollable table wrappers — prevents horizontal overflow on small screens */
+.wmh-table-scroll {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    width: 100%;
+}
+
+/* Compatibility table */
+.wmh-compat-table {
+    border-collapse: collapse;
+    width: 100%;
+    min-width: 360px;
+}
+
+.wmh-compat-table thead th {
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: 10px 14px;
+    background: #f6f7f7;
+    border-bottom: 2px solid #dcdcde;
+    white-space: nowrap;
+}
+
+.wmh-compat-table td {
+    padding: 9px 14px;
+    font-size: 13px;
+    vertical-align: middle;
+}
+
+.wmh-compat-col-tool {
+    width: 70%;
+}
+
+.wmh-compat-col-tier {
+    width: 15%;
+    text-align: center;
+}
+
+.wmh-compat-col-pro {
+    background: #f0f6ff;
+}
+
+.wmh-compat-yes {
+    color: #028000;
+    font-size: 15px;
+}
+
+.wmh-compat-no {
+    color: #b20a0a;
+    font-size: 15px;
+}
+
+/* System info table */
+.wmh-system-table {
+    border-collapse: collapse;
+    width: 100%;
+    min-width: 280px;
+    margin-bottom: 0;
+}
+
+.wmh-system-table td {
+    padding: 9px 14px;
+    font-size: 13px;
+    vertical-align: middle;
+    word-break: break-word;
+}
+
+.wmh-system-label {
+    font-weight: 600;
+    color: #3c434a;
+    width: 50%;
+    white-space: nowrap;
+}
+
+/* ---- Responsive overrides ---- */
+
+/* Stack pro banner button full-width below 480px */
+@media (max-width: 480px) {
+    .wmh-settings-tab-body {
+        padding: 16px 12px;
+    }
+
+    .wmh-pro-banner {
+        -webkit-box-orient: vertical;
+        -webkit-box-direction: normal;
+        -ms-flex-direction: column;
+        flex-direction: column;
+        -webkit-box-align: start;
+        -ms-flex-align: start;
+        align-items: flex-start;
+    }
+
+    .wmh-pro-banner > * {
+        margin-right: 0;
+    }
+
+    .wmh-pro-banner-btn {
+        width: 100%;
+        text-align: center;
+    }
+}
+
+/* Tighten tab labels on narrow sidebar layouts */
+@media (max-width: 782px) {
+    .wmh_settings_container ul.nav-tabs .nav-link {
+        font-size: 13px;
+        padding-left: 10px;
+        padding-right: 10px;
+    }
+
+    .wmh_settings_container ul.nav-tabs .nav-link i {
+        display: none;
+    }
+
+    .wmh-system-label {
+        white-space: normal;
+    }
+}
+
 /************ Licence page css *********/
 .wmh-button-form {
     display: flex;
@@ -753,36 +1259,262 @@ ul.wmh-compatibility-notice li {
     text-decoration: none !important;
 }
 
-.wmh-header ul.navbar-nav li .nav-link.active {
+/* WMH media Header and Get help page css End*/
+
+/* ── New header bar ─────────────────────────────────────────── */
+.wmh-hd-bar {
+    display: flex;
+    align-items: center;
+    background: #fff;
+    border: 1px solid #dcdcde;
+    border-radius: 6px;
+    padding: 0 16px;
+    margin-top: 8px;
+    margin-bottom: 10px;
+    gap: 0;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+}
+
+.wmh-hd-logo {
+    flex-shrink: 0;
+    padding: 11px 0;
+    margin-right: 20px;
+    border-right: 1px solid #e8e8e8;
+    padding-right: 20px;
+}
+
+.wmh-hd-logo img {
+    height: 30px;
+    width: auto;
+    display: block;
+}
+
+.wmh-hd-logo a:focus {
+    box-shadow: none !important;
+}
+
+.wmh-hd-nav {
+    display: flex;
+    align-items: stretch;
+    flex: 1;
+    gap: 0;
+}
+
+.wmh-hd-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 13px 14px;
+    font-size: 13px;
+    font-weight: 500;
+    color: #50575e;
+    text-decoration: none !important;
+    border-bottom: 3px solid transparent;
+    border-top: 3px solid transparent;
+    transition: color 0.15s, border-color 0.15s;
+    white-space: nowrap;
+    line-height: 1;
+}
+
+.wmh-hd-link i {
+    font-size: 12px;
+    opacity: 0.75;
+}
+
+.wmh-hd-link:hover {
     color: #2271b1;
+}
+
+.wmh-hd-link.active {
+    color: #2271b1;
+    font-weight: 600;
+    border-bottom-color: #2271b1;
+}
+
+.wmh-hd-link.active i {
+    opacity: 1;
+}
+
+/* "Pro" pill inside Folder Scan link */
+.wmh-pro-badge {
+    display: inline-block;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.4px;
+    color: #fff;
+    background: linear-gradient(135deg, #f0a30a 0%, #d97706 100%);
+    padding: 2px 5px;
+    border-radius: 3px;
+    text-transform: uppercase;
+    line-height: 1.3;
+    margin-left: 2px;
+    vertical-align: middle;
+}
+
+/* Action buttons (right side) */
+.wmh-hd-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+    padding-left: 16px;
+    margin-left: auto;
+    border-left: 1px solid #e8e8e8;
+    padding: 10px 0 10px 16px;
+}
+
+/* FAQ — subtle outline */
+.wmh-hd-faq {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 12px;
     font-weight: 500;
+    color: #50575e;
+    text-decoration: none !important;
+    padding: 6px 12px;
+    border-radius: 5px;
+    border: 1px solid #dcdcde;
+    background: #f6f7f7;
+    transition: color 0.15s, border-color 0.15s, background 0.15s;
+    white-space: nowrap;
+}
+
+.wmh-hd-faq i {
+    font-size: 12px;
+}
+
+.wmh-hd-faq:hover {
+    color: #2271b1;
     border-color: #2271b1;
+    background: #f0f6fc;
 }
 
-.wmh-header ul.navbar-nav li .nav-link {
-    padding: 15px 15px;
-    border-bottom: 2px solid transparent;
-    color: #000;
-    font-weight: 500;
+/* Upgrade to Pro — golden premium button */
+.wmh-hd-upgrade {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12.5px;
+    font-weight: 700;
+    color: #fff !important;
+    text-decoration: none !important;
+    padding: 7px 16px;
+    border-radius: 6px;
+    background: linear-gradient(135deg, #f59e0b 0%, #d97706 55%, #b45309 100%);
+    box-shadow: 0 2px 8px rgba(217, 119, 6, 0.38), inset 0 1px 0 rgba(255, 255, 255, 0.18);
+    transition: transform 0.15s ease, box-shadow 0.15s ease, filter 0.15s ease;
+    letter-spacing: 0.2px;
+    white-space: nowrap;
+    border: none;
 }
 
-.wmh-header ul.navbar-nav li {
-    margin-bottom: 0;
+.wmh-hd-upgrade i {
+    font-size: 12px;
 }
 
-@media screen and (max-width: 767px) {
-    .wmh-header {
-        position: relative;
+.wmh-hd-upgrade:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 18px rgba(217, 119, 6, 0.48), inset 0 1px 0 rgba(255, 255, 255, 0.18);
+    filter: brightness(1.07);
+}
+
+.wmh-hd-upgrade:active {
+    transform: scale(0.97);
+    filter: brightness(0.96);
+}
+
+/* ── Header responsive ─────────────────────────────────────── */
+
+/* Tablet: hide nav icons to save space */
+@media screen and (max-width: 960px) {
+    .wmh-hd-link i {
+        display: none;
     }
 
-    /*.wmh-header a.btn.btn-primary {
-        position: absolute;
-        right: 10px;
-        top: 10px;
-    }*/
+    .wmh-hd-link {
+        padding: 13px 11px;
+        font-size: 12px;
+    }
+
+    .wmh-hd-logo {
+        margin-right: 12px;
+        padding-right: 12px;
+    }
 }
 
-/* WMH media Header and Get help page css End*/
+/* Tablet / large mobile: nav wraps to second row, actions stay compact */
+@media screen and (max-width: 782px) {
+    .wmh-hd-bar {
+        flex-wrap: wrap;
+        padding: 0;
+        gap: 0;
+    }
+
+    /* Row 1 left: logo */
+    .wmh-hd-logo {
+        flex: 1;
+        border-right: none;
+        padding: 9px 12px;
+        margin-right: 0;
+    }
+
+    /* Row 1 right: FAQ + Upgrade — flex-shrink: 0 so they never clip */
+    .wmh-hd-actions {
+        flex-shrink: 0;
+        border-left: none;
+        padding: 8px 10px;
+        margin-left: 0;
+        gap: 6px;
+        align-items: center;
+    }
+
+    .wmh-hd-upgrade {
+        white-space: nowrap;
+    }
+
+    /* Row 2: nav — full width, horizontal scroll */
+    .wmh-hd-nav {
+        order: 3;
+        width: 100%;
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+        border-top: 1px solid #e8e8e8;
+        padding: 0 4px;
+    }
+
+    .wmh-hd-nav::-webkit-scrollbar {
+        display: none;
+    }
+
+    .wmh-hd-link {
+        flex-shrink: 0;
+        white-space: nowrap;
+        padding: 10px 11px;
+        font-size: 12px;
+        border-bottom-width: 2px;
+    }
+}
+
+/* Small mobile: tighter text */
+@media screen and (max-width: 600px) {
+    .wmh-hd-logo img {
+        height: 26px;
+    }
+
+    .wmh-hd-faq {
+        padding: 5px 8px;
+        font-size: 11px;
+    }
+
+    .wmh-hd-upgrade {
+        padding: 6px 10px;
+        font-size: 11px;
+        gap: 4px;
+    }
+}
 
 /* Image scan from settings page toggle css */
 .wmh-switch input[type=checkbox] {
@@ -825,10 +1557,7 @@ ul.wmh-compatibility-notice li {
     transform: translateX(-100%);
 }
 
-/* For logo shadow on click  */
-.media-hygiene-logo a:focus {
-    box-shadow: unset !important;
-}
+/* legacy logo rule kept for any residual references */
 
 .notice-alert .important-notice {
     color: #d63638;
@@ -840,6 +1569,23 @@ ul.wmh-compatibility-notice li {
 
 .notice .important-notice-text {
     color: #2271b1;
+}
+
+/* Notice icons */
+.wmh-notice-backup p,
+.wmh-notice-scan p,
+.wmh-notice-db p,
+.wmh-notice-compat p,
+.wmh-notice-privacy p {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.wmh-notice-icon {
+    flex-shrink: 0;
+    font-size: 14px;
 }
 
 /* Tooltip */
@@ -855,18 +1601,129 @@ a#restore-default-file-exe {
     font-size: 13px;
 }
 
-.wmh-delete-page-media .tooltip-1,
-.wmh-download-page-media .tooltip-1,
-.wmh-button-form .tooltip-1 {
-    right: 10px;
-    top: 5px;
-}
-
 .wmh-button-form,
 .wmh-delete-page-media,
 .wmh-download-page-media,
+.wmh-trash-page-media,
 .ccpt {
     position: relative;
+}
+
+/* Form is a split-button group — button + tooltip tab fused */
+.wmh-button-form form,
+.wmh-download-page-media form {
+    display: inline-flex;
+    align-items: stretch;
+    gap: 0;
+    border-radius: 6px;
+    box-shadow: 0 2px 8px rgba(34, 113, 177, 0.32);
+    transition: box-shadow 0.15s;
+}
+
+.wmh-button-form form:hover,
+.wmh-download-page-media form:hover {
+    box-shadow: 0 5px 16px rgba(34, 113, 177, 0.42);
+}
+
+.wmh-trash-page-media form {
+    display: inline-flex;
+    align-items: stretch;
+    gap: 0;
+    border-radius: 6px;
+    box-shadow: 0 2px 8px rgba(214, 54, 56, 0.32);
+    transition: box-shadow 0.15s;
+}
+
+.wmh-trash-page-media form:hover {
+    box-shadow: 0 5px 16px rgba(214, 54, 56, 0.42);
+}
+
+/* Button loses right rounding — tooltip tab closes it */
+.wmh-button-form .wmh-btn,
+.wmh-download-page-media .wmh-btn,
+.wmh-trash-page-media .wmh-btn {
+    border-radius: 6px 0 0 6px !important;
+    box-shadow: none !important;
+    margin-bottom: 0px;
+}
+
+.wmh-button-form .wmh-btn:hover,
+.wmh-download-page-media .wmh-btn:hover,
+.wmh-trash-page-media .wmh-btn:hover {
+    transform: none;
+    box-shadow: none !important;
+    filter: brightness(1.08);
+}
+
+/* ── Tooltip split-tab (blue buttons) ── */
+.wmh-button-form .tooltip-1,
+.wmh-download-page-media .tooltip-1 {
+    position: relative;
+    right: auto;
+    top: auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    background: linear-gradient(135deg, #1a68a8 0%, #0f527e 100%);
+    border-radius: 0 6px 6px 0;
+    border-left: 1px solid rgba(255, 255, 255, 0.2);
+    cursor: help;
+    transition: background 0.15s;
+}
+
+.wmh-button-form .tooltip-1:hover,
+.wmh-download-page-media .tooltip-1:hover {
+    background: linear-gradient(135deg, #155d96 0%, #0c4870 100%);
+}
+
+/* ── Tooltip split-tab (red trash button) ── */
+.wmh-trash-page-media .tooltip-1 {
+    position: relative;
+    right: auto;
+    top: auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    background: linear-gradient(135deg, #bf2a2c 0%, #952325 100%);
+    border-radius: 0 6px 6px 0;
+    border-left: 1px solid rgba(255, 255, 255, 0.2);
+    cursor: help;
+    transition: background 0.15s;
+}
+
+.wmh-trash-page-media .tooltip-1:hover {
+    background: linear-gradient(135deg, #aa2426 0%, #821e20 100%);
+}
+
+/* Icon color — white inside split tab */
+.wmh-button-form .tooltip-1>i,
+.wmh-button-form .tooltip-1 svg.svg-inline--fa,
+.wmh-download-page-media .tooltip-1>i,
+.wmh-download-page-media .tooltip-1 svg.svg-inline--fa,
+.wmh-trash-page-media .tooltip-1>i,
+.wmh-trash-page-media .tooltip-1 svg.svg-inline--fa {
+    color: rgba(255, 255, 255, 0.85) !important;
+    font-size: 12px;
+}
+
+/* Popup opens downward below the split tab */
+.wmh-button-form .tooltip-1 .right,
+.wmh-download-page-media .tooltip-1 .right,
+.wmh-trash-page-media .tooltip-1 .right {
+    top: calc(100% + 8px);
+    left: auto;
+    right: 0;
+    margin-left: 0;
+    transform: none;
+}
+
+/* Hide the left-facing arrow (was for right-side popup) */
+.wmh-button-form .tooltip-1 .right>i,
+.wmh-download-page-media .tooltip-1 .right>i,
+.wmh-trash-page-media .tooltip-1 .right>i {
+    display: none;
 }
 
 .ccpt-right {
@@ -902,11 +1759,6 @@ a#restore-default-file-exe {
     display: block;
 }
 
-.wmh-download-page-media .tooltip-1 svg.svg-inline--fa.fa-circle-question,
-.wmh-delete-page-media .tooltip-1 svg.svg-inline--fa.fa-circle-question,
-.wmh-button-form .tooltip-1 svg.svg-inline--fa.fa-circle-question {
-    color: #fff;
-}
 
 .tooltip-1 .right i {
     position: absolute;
@@ -954,6 +1806,8 @@ a#restore-default-file-exe {
     border-color: #135e96 !important;
 }
 
+/* wmh-hd-upgrade replaces the old rounded-0 header buttons */
+
 span.copied-success {
     font-size: 14px;
 }
@@ -970,14 +1824,7 @@ span.copied-success {
     width: 100%;
 }
 
-ul.navbar-nav.wp-mh li:last-child>a>span {
-    position: absolute;
-    right: 0px;
-    top: 8px;
-    font-size: 11px;
-    color: #2271b1;
-    font-weight: 700;
-}
+/* old pro-badge span replaced by .wmh-pro-badge */
 
 a#restore-default-file-exe {
     color: #2271b1;
@@ -1138,3 +1985,340 @@ table#wmh-deleted-media-list {
         border-color: #d94f1e;
     }
 }
+
+/* ===== Dashboard UI — compact redesign ===== */
+
+/* Wrapper */
+.wmh-db-wrap {
+    margin-bottom: 14px;
+}
+
+/* ── Stats Strip ── */
+.wmh-stats-strip {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 8px;
+    flex-wrap: wrap;
+    align-items: stretch;
+}
+
+.wmh-st-tile {
+    flex: 1;
+    min-width: 100px;
+    background: #fff;
+    border: 1px solid #dcdcde;
+    border-top: 3px solid #ddd;
+    border-radius: 4px;
+    padding: 10px 14px 9px;
+    position: relative;
+    overflow: hidden;
+    transition: box-shadow 0.18s, transform 0.15s;
+}
+
+.wmh-st-tile:hover {
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.1);
+    transform: translateY(-1px);
+}
+
+.wmh-st-icon {
+    position: absolute;
+    top: 8px;
+    right: 10px;
+    font-size: 26px;
+    opacity: 0.07;
+    color: #333;
+    pointer-events: none;
+}
+
+.wmh-st-num {
+    font-size: 22px;
+    font-weight: 700;
+    color: #1d2327;
+    line-height: 1.1;
+    margin-bottom: 3px;
+}
+
+.wmh-st-lbl {
+    font-size: 10px;
+    color: #787c82;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-weight: 500;
+}
+
+/* Visual divider between count group and size group */
+.wmh-st-divider {
+    width: 1px;
+    background: #e0e0e0;
+    align-self: stretch;
+    margin: 2px 0;
+    flex-shrink: 0;
+}
+
+/* Tile accent colors */
+.wmh-st-total,
+#total-media,
+#total-media-size {
+    border-top-color: #2271b1;
+}
+
+.wmh-st-used,
+#media-in-use,
+#media-in-use-size {
+    border-top-color: #00a32a;
+}
+
+.wmh-st-left,
+#media-over-left,
+#media-over-left-size {
+    border-top-color: #d63638;
+}
+
+/* ── Lower two-column row ── */
+.wmh-db-lower {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+}
+
+/* ── Panel (shared) ── */
+.wmh-db-panel {
+    background: #fff;
+    border: 1px solid #dcdcde;
+    border-radius: 4px;
+    padding: 10px 14px 12px;
+}
+
+.wmh-db-panel-hd {
+    font-size: 11px;
+    font-weight: 600;
+    color: #50575e;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding-bottom: 8px;
+    margin-bottom: 8px;
+    border-bottom: 1px solid #f0f0f1;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.wmh-db-panel-hd i {
+    color: #2271b1;
+    font-size: 12px;
+}
+
+/* ── Media Left Over list rows ── */
+.wmh-lo-list {
+    display: flex;
+    flex-direction: column;
+}
+
+.wmh-lo-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 0;
+    border-bottom: 1px solid #f5f5f5;
+}
+
+.wmh-lo-row:last-child {
+    border-bottom: none;
+    padding-bottom: 0;
+}
+
+.wmh-lo-icon {
+    font-size: 13px;
+    color: #2271b1;
+    width: 16px;
+    flex-shrink: 0;
+    text-align: center;
+}
+
+.wmh-lo-cat {
+    flex: 0 0 72px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #1d2327;
+}
+
+.wmh-lo-cnt {
+    flex: 0 0 24px;
+    font-size: 14px;
+    font-weight: 700;
+    color: #1d2327;
+    text-align: right;
+}
+
+.wmh-lo-bar {
+    flex: 1;
+    height: 4px;
+    background: #eee;
+    border-radius: 2px;
+    overflow: hidden;
+}
+
+.wmh-lo-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #2271b1, #135e96);
+    border-radius: 2px;
+    transition: width 0.5s ease;
+}
+
+.wmh-lo-pct {
+    flex: 0 0 48px;
+    font-size: 10px;
+    color: #a0a5aa;
+    text-align: right;
+}
+
+.wmh-lo-empty .wmh-lo-cnt,
+.wmh-lo-empty .wmh-lo-pct {
+    color: #ccc;
+}
+
+/* Breakdown list — extension label overrides the category width */
+.wmh-bd-ext {
+    flex: 0 0 52px !important;
+    text-transform: uppercase;
+    font-size: 11px !important;
+    letter-spacing: 0.3px;
+}
+
+/* File size column — sits between bar and % */
+.wmh-bd-size {
+    flex: 0 0 50px;
+    font-size: 10px;
+    color: #a0a5aa;
+    text-align: right;
+}
+
+.wmh-bd-empty {
+    padding: 6px 0;
+    color: #787c82;
+    font-size: 12px;
+    margin: 0;
+}
+
+/* ── Dashboard responsive ── */
+
+/* Tablet: stack the two panels */
+@media screen and (max-width: 900px) {
+    .wmh-db-lower {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Mobile: stats wrap into 3-per-row (counts row + sizes row) */
+@media screen and (max-width: 600px) {
+    .wmh-stats-strip {
+        gap: 4px;
+    }
+
+    .wmh-st-tile {
+        flex: 0 0 calc(33.33% - 3px);
+        min-width: 0;
+        padding: 8px 10px 7px;
+    }
+
+    .wmh-st-num {
+        font-size: 18px;
+    }
+
+    .wmh-st-divider {
+        display: none;
+    }
+
+    .wmh-st-icon {
+        display: none;
+    }
+}
+
+/* Very small: 2-per-row fallback */
+@media screen and (max-width: 380px) {
+    .wmh-st-tile {
+        flex: 0 0 calc(50% - 3px);
+    }
+}
+
+/* Button bar: buttons can shrink on mobile */
+@media screen and (max-width: 600px) {
+    .wmh-btn {
+        min-width: 0 !important;
+    }
+}
+
+/* Notices tighter on mobile */
+@media screen and (max-width: 600px) {
+    .wmh-db-wrap {
+        margin-top: 8px !important;
+    }
+
+    .wmh-lo-cat {
+        flex: 0 0 60px;
+    }
+
+    .wmh-bd-ext {
+        flex: 0 0 44px !important;
+    }
+}
+
+/* ── Trash success notice banner ── */
+.wmh-trash-success-notice {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    background: #fff8e1;
+    border: 1px solid #f0c33c;
+    border-left: 4px solid #f0a500;
+    border-radius: 6px;
+    padding: 14px 16px;
+    margin-bottom: 14px;
+    position: relative;
+}
+.wmh-tsn-icon {
+    flex-shrink: 0;
+    width: 34px;
+    height: 34px;
+    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-size: 15px;
+    margin-top: 1px;
+}
+.wmh-tsn-body {
+    flex: 1;
+    min-width: 0;
+}
+.wmh-tsn-body strong {
+    display: block;
+    font-size: 13.5px;
+    color: #7a4f00;
+    margin-bottom: 6px;
+}
+.wmh-tsn-body p {
+    margin: 0;
+    font-size: 12.5px;
+    color: #5a3d00;
+    line-height: 1.6;
+}
+.wmh-tsn-body a {
+    color: #2271b1;
+    text-decoration: underline;
+}
+.wmh-tsn-close {
+    flex-shrink: 0;
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: #a07830;
+    font-size: 14px;
+    padding: 2px 4px;
+    line-height: 1;
+    opacity: 0.7;
+    transition: opacity 0.15s;
+}
+.wmh-tsn-close:hover { opacity: 1; }

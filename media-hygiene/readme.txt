@@ -5,9 +5,9 @@ Description: The Media Hygiene plugin removes unused media from the WordPress li
 Contributors: slui
 Tags: unused media, clean, delete, remove, images
 Requires at least: 5.3
-Requires PHP: 7.4
+Requires PHP: 8.0
 Tested up to: 6.9.4
-Stable tag: 4.0.2
+Stable tag: 5.0.0
 License: Custom
 License URI: Custom license, no Distribution allowed
 
@@ -270,6 +270,8 @@ The Media Hygiene plugin is designed to be compatible with the latest version of
 1. Scan and See
 2. Identify Unused Media Files
 3. Remove Media Files 
+4. Settings
+5. Bulk Delete and Bulk Restore
 
 = Minimum Requirements =
 

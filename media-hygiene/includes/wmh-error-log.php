@@ -27,7 +27,7 @@ class wmh_error_log
         /* check nonce here. */
         $wp_nonce = sanitize_text_field($_POST['nonce']);
         if (!wp_verify_nonce($wp_nonce, 'clear_error_log_nonce')) {
-            die(esc_html(__('Security check. Hacking not allowed', MEDIA_HYGIENE)));
+            wp_die(esc_html__('Security check. Hacking not allowed', MEDIA_HYGIENE), '', array('response' => 403));
         }
         $clear_error_log_sql = ' TRUNCATE TABLE ' . $this->wmh_error_log . ' ';
         $cleared = $this->conn->query($clear_error_log_sql);

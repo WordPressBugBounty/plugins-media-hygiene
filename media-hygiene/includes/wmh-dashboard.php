@@ -452,7 +452,7 @@ class wmh_dashboard
         /* check nonce here. */
         $wp_nonce = sanitize_text_field($_POST['nonce']);
         if (!wp_verify_nonce($wp_nonce, 'database_update_wmh_by_version_nonce')) {
-            die(esc_html(__('Security check. Hacking not allowed', MEDIA_HYGIENE)));
+            wp_die(esc_html__('Security check. Hacking not allowed', MEDIA_HYGIENE), '', array('response' => 403));
         }
 
         require_once(ABSPATH . 'wp-admin/includes/upgrade.php');

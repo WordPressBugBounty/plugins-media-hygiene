@@ -1,5 +1,31 @@
 jQuery(document).ready(function () {
 
+    /* ── Trash success notice — shown after page reload ── */
+    var wmhTrashNotice = sessionStorage.getItem('wmh_trash_notice');
+    if (wmhTrashNotice) {
+        sessionStorage.removeItem('wmh_trash_notice');
+        try {
+            var nd = JSON.parse(wmhTrashNotice);
+            var banner = jQuery(
+                '<div class="wmh-trash-success-notice" role="alert">' +
+                '<span class="wmh-tsn-icon"><i class="fa-solid fa-trash-can-arrow-up"></i></span>' +
+                '<div class="wmh-tsn-body">' +
+                '<strong>' + nd.message + '</strong>' +
+                '<p>These files are now in the <strong>WordPress Trash</strong> — nothing has been permanently deleted from your site yet. ' +
+                'Please review your site to confirm everything looks correct. ' +
+                'If any image was moved to trash by mistake, restore it from <a href="?page=wmh-media-hygiene&type=trash" target="_blank">Media Library &rsaquo; Trash</a>. ' +
+                'Once you are satisfied, empty the trash to permanently free up the space.</p>' +
+                '</div>' +
+                '<button class="wmh-tsn-close" aria-label="Dismiss"><i class="fa-solid fa-xmark"></i></button>' +
+                '</div>'
+            );
+            banner.find('.wmh-tsn-close').on('click', function () {
+                banner.fadeOut(200, function () { banner.remove(); });
+            });
+            jQuery('.wmh-container').first().prepend(banner);
+        } catch (e) { }
+    }
+
     jQuery('[data-toggle="tooltip"]').tooltip();
 
     /* Bootstrap datepicker for select year and month. */
@@ -66,12 +92,34 @@ jQuery(document).on("click", ".update-database-msg-btn", function (e) {
     //jQuery("#wmh-update-database").addClass("wmh-update-database-btn-highlight");
 });
 
+/* Re-enable all scan-related buttons after scan ends (success or error). */
+function fnWmhScanResetButtons() {
+    jQuery('#scan-button').removeAttr('disabled').css('cursor', '');
+    jQuery('#delete-all-media-button').removeAttr('disabled').css('cursor', '');
+    jQuery('#create-zip-button').removeAttr('disabled').css('cursor', '');
+    jQuery('#trash-page-media-button').removeAttr('disabled').css('cursor', '');
+    jQuery('#create-page-zip-button').removeAttr('disabled').css('cursor', '');
+    jQuery('.scan-loader').css('display', 'none');
+    jQuery('.scan-nt-warn').css('display', 'none');
+}
+
+/* Show a scan-phase error notice and reset buttons. */
+function fnWmhScanError(message) {
+    fnWmhScanResetButtons();
+    jQuery('.progress').css('display', 'none');
+    jQuery('.scan-data-status').css('display', 'none');
+    jQuery('.notice.notice-scan').css('display', 'block')
+        .removeClass('notice-success').addClass('notice-error')
+        .find('p').text(message || 'Scan failed — please try again or check the server error log.');
+}
+
 /* scan ajax call function. */
 function fnWmhScanAttachment(data) {
     jQuery.ajax({
         type: 'POST',
         url: wmhObj.ajaxurl,
         data: data,
+        timeout: 120000,
         beforeSend: function () {
             jQuery('.scan-loader').css('display', 'inline-block');
             jQuery('.progress .bar').addClass('bg-success');
@@ -81,14 +129,16 @@ function fnWmhScanAttachment(data) {
             jQuery('.scan-data-status .scan-data-title').text('Retrieving the data ... ');
             jQuery('.scan-data-status .scan-data-steps b').text('(1/4)');
         },
-        success: function (data) {
-            var data = JSON.parse(data);
-
-            /* ajaxcall, which will increments. */
+        success: function (raw) {
+            var data;
+            try { data = JSON.parse(raw); } catch (e) {
+                console.error('[Media Hygiene] Scan step 1 raw response:', raw);
+                fnWmhScanError('Scan error (step 1): unexpected server response. Please check the server error log.');
+                return;
+            }
             var ajax_call = data.ajax_call;
-            /* progress bar. */
             var progress_bar_width = data.progress_bar_width;
-            if (progress_bar_width < 100 || progress_bar_width == 100) {
+            if (progress_bar_width <= 100) {
                 jQuery('.progress .bar').css('width', progress_bar_width + '%');
                 jQuery('.progress .percent').text(progress_bar_width + '%');
             }
@@ -96,22 +146,23 @@ function fnWmhScanAttachment(data) {
                 ajax_call++;
                 jQuery('#ajax_call').val(ajax_call);
                 jQuery('#progress_bar').val(progress_bar_width);
-                var data = jQuery('#wmh-scan-form').serialize();
-
-                fnWmhScanAttachment(data);
+                fnWmhScanAttachment(jQuery('#wmh-scan-form').serialize());
             } else if (data.flg == 2) {
                 jQuery('.progress .bar').css('width', '100%');
                 jQuery('.progress .percent').text('100%');
-                let fetchDataAjaxCall = 1;
-                let fetchDataProgressBar = 0;
-                fnFetchDataFromDatabase(fetchDataAjaxCall, fetchDataProgressBar);
+                fnFetchDataFromDatabase(1, 0);
             } else if (data.flg == 0) {
+                fnWmhScanResetButtons();
                 alert(data.message);
                 location.reload();
+            } else {
+                fnWmhScanError(data.message || 'Unknown scan state returned from server.');
             }
+        },
+        error: function (xhr, status, error) {
+            fnWmhScanError('Scan connection error (step 1).\nStatus: ' + status + '\n' + error);
         }
     });
-
 }
 
 /* fetch data from database */
@@ -128,18 +179,21 @@ function fnFetchDataFromDatabase(fetchDataAjaxCall = '', fetchDataProgressBar = 
         type: 'POST',
         url: wmhObj.ajaxurl,
         data: data,
+        timeout: 120000,
         beforeSend: function () {
             jQuery('.scan-data-status .scan-data-title').text('Retrieving the data ... ');
             jQuery('.scan-data-status .scan-data-steps b').text('(2/4)');
         },
-        success: function (res) {
-            var res = JSON.parse(res);
-
-            /* ajaxcall, which will increments. */
+        success: function (raw) {
+            var res;
+            try { res = JSON.parse(raw); } catch (e) {
+                console.error('[Media Hygiene] Scan step 2 raw response:', raw);
+                fnWmhScanError('Scan error (step 2): unexpected server response. Please check the server error log.');
+                return;
+            }
             var ajax_call = res.ajax_call;
-            /* progress bar. */
             var progress_bar_width = res.progress_bar_width;
-            if (progress_bar_width < 100 || progress_bar_width == 100) {
+            if (progress_bar_width <= 100) {
                 jQuery('.progress .bar').css('width', progress_bar_width + '%');
                 jQuery('.progress .percent').text(progress_bar_width + '%');
             }
@@ -149,16 +203,19 @@ function fnFetchDataFromDatabase(fetchDataAjaxCall = '', fetchDataProgressBar = 
             } else if (res.flg == 2) {
                 jQuery('.progress .bar').css('width', '100%');
                 jQuery('.progress .percent').text('100%');
-                let scanningDataAjaxCall = 1;
-                let progressBar = 0;
-                fnScanningDataAjaxCall(scanningDataAjaxCall, progressBar);
+                fnScanningDataAjaxCall(1, 0);
             } else if (res.flg == 0) {
+                fnWmhScanResetButtons();
                 alert(res.message);
                 location.reload();
             } else if (res.flg == 3) {
-                elementor_ajax_call = 0;
-                fnSpecialProcessForElementor(ajax_call, elementor_ajax_call, progress_bar_width);
+                fnSpecialProcessForElementor(ajax_call, 0, progress_bar_width);
+            } else {
+                fnWmhScanError(res.message || 'Unknown state in step 2.');
             }
+        },
+        error: function (xhr, status, error) {
+            fnWmhScanError('Scan connection error (step 2).\nStatus: ' + status + '\n' + error);
         }
     });
 
@@ -175,11 +232,15 @@ function fnSpecialProcessForElementor(ajax_call = '', elementor_ajax_call = '', 
         type: 'POST',
         url: wmhObj.ajaxurl,
         data: data,
-        success: function (res) {
-            var res = JSON.parse(res);
-            console.log(res);
-            /* progress bar. */
-            if (res.progress_bar_width < 100 || res.progress_bar_width == 100) {
+        timeout: 120000,
+        success: function (raw) {
+            var res;
+            try { res = JSON.parse(raw); } catch (e) {
+                console.error('[Media Hygiene] Scan Elementor step raw response:', raw);
+                fnWmhScanError('Scan error (Elementor step): unexpected server response. Please check the server error log.');
+                return;
+            }
+            if (res.progress_bar_width <= 100) {
                 jQuery('.progress .bar').css('width', res.progress_bar_width + '%');
                 jQuery('.progress .percent').text(res.progress_bar_width + '%');
             }
@@ -188,7 +249,12 @@ function fnSpecialProcessForElementor(ajax_call = '', elementor_ajax_call = '', 
                 fnFetchDataFromDatabase(ajax_call, progress_bar_width);
             } else if (res.flg == 1) {
                 fnSpecialProcessForElementor(ajax_call, res.ajax_call, res.progress_bar_width);
+            } else {
+                fnWmhScanError(res.message || 'Unknown state in Elementor step.');
             }
+        },
+        error: function (xhr, status, error) {
+            fnWmhScanError('Scan connection error (Elementor step).\nStatus: ' + status + '\n' + error);
         }
     });
 }
@@ -205,18 +271,21 @@ function fnScanningDataAjaxCall(scanningDataAjaxCall = '', progressBar = '') {
         type: 'POST',
         url: wmhObj.ajaxurl,
         data: data,
+        timeout: 120000,
         beforeSend: function () {
             jQuery('.scan-data-status .scan-data-title').text('Scanning the data ... ');
             jQuery('.scan-data-status .scan-data-steps b').text('(3/4)');
         },
-        success: function (res) {
-            var res = JSON.parse(res);
-
-            /* ajaxcall, which will increments. */
+        success: function (raw) {
+            var res;
+            try { res = JSON.parse(raw); } catch (e) {
+                console.error('[Media Hygiene] Scan step 3 raw response:', raw);
+                fnWmhScanError('Scan error (step 3): unexpected server response. Please check the server error log.');
+                return;
+            }
             var ajax_call = res.ajax_call;
-            /* progress bar. */
             var progress_bar_width = res.progress_bar_width;
-            if (progress_bar_width < 100 || progress_bar_width == 100) {
+            if (progress_bar_width <= 100) {
                 jQuery('.progress .bar').css('width', progress_bar_width + '%');
                 jQuery('.progress .percent').text(progress_bar_width + '%');
             }
@@ -226,12 +295,17 @@ function fnScanningDataAjaxCall(scanningDataAjaxCall = '', progressBar = '') {
             } else if (res.flg == 2) {
                 jQuery('.progress .bar').css('width', '100%');
                 jQuery('.progress .percent').text('100%');
-                let statisticsAjaxCall = 1;
-                fnFetchStatisticsData(statisticsAjaxCall);
+                fnFetchStatisticsData(1);
             } else if (res.flg == 0) {
+                fnWmhScanResetButtons();
                 alert(res.message);
                 location.reload();
+            } else {
+                fnWmhScanError(res.message || 'Unknown state in step 3.');
             }
+        },
+        error: function (xhr, status, error) {
+            fnWmhScanError('Scan connection error (step 3).\nStatus: ' + status + '\n' + error);
         }
     });
 }
@@ -246,17 +320,21 @@ function fnFetchStatisticsData(statisticsAjaxCall = '') {
         type: 'POST',
         url: wmhObj.ajaxurl,
         data: data,
+        timeout: 120000,
         beforeSend: function () {
             jQuery('.scan-data-status .scan-data-title').text('Analyzing the data ... ');
             jQuery('.scan-data-status .scan-data-steps b').text('(4/4)');
         },
-        success: function (res) {
-            var res = JSON.parse(res);
-            /* ajax call */
+        success: function (raw) {
+            var res;
+            try { res = JSON.parse(raw); } catch (e) {
+                console.error('[Media Hygiene] Scan step 4 raw response:', raw);
+                fnWmhScanError('Scan error (step 4): unexpected server response. Please check the server error log.');
+                return;
+            }
             var ajax_call = res.ajax_call;
-            /* progress bar. */
             var progress_bar_width = res.progress_bar_width;
-            if (progress_bar_width < 100 || progress_bar_width == 100) {
+            if (progress_bar_width <= 100) {
                 jQuery('.progress .bar').css('width', progress_bar_width + '%');
                 jQuery('.progress .percent').text(progress_bar_width + '%');
             }
@@ -264,11 +342,16 @@ function fnFetchStatisticsData(statisticsAjaxCall = '') {
                 ajax_call++;
                 fnFetchStatisticsData(ajax_call);
             } else if (res.flg == '2') {
+                fnWmhScanResetButtons();
                 location.reload();
             } else if (res.flg == '0') {
-                alert('Something is wrong');
-                location.reload();
+                fnWmhScanError(res.message || 'Scan completed but statistics could not be saved.');
+            } else {
+                fnWmhScanError(res.message || 'Unknown state in step 4.');
             }
+        },
+        error: function (xhr, status, error) {
+            fnWmhScanError('Scan connection error (step 4).\nStatus: ' + status + '\n' + error);
         }
     });
 }
@@ -287,20 +370,31 @@ function fn_wmh_row_action_trash(post_id = '', file_size = '') {
         type: 'POST',
         url: wmhObj.ajaxurl,
         data: data,
+        timeout: 60000,
         beforeSend: function () {
-            jQuery('.row-action-trash-loader-' + post_id + '').css('display', 'inline-block');
+            jQuery('.row-action-trash-loader-' + post_id).css('display', 'inline-block');
         },
-        success: function (data) {
-            var data = JSON.parse(data);
-            if (data.flg == '1') {
-                alert(data.message);
+        success: function (raw) {
+            var res;
+            try { res = JSON.parse(raw); } catch (e) {
+                alert('Unexpected server response. Please check the error log.\n\n' + raw.substring(0, 400));
+                return;
+            }
+            if (res.flg == 1) {
+                alert(res.message);
                 location.reload();
-            } else if (data.flg == '0') {
-                alert(data.message);
+            } else if (res.flg == -1) {
+                alert('Error: ' + (res.message || 'Unknown error') + '\n\nPlease check the debug log.');
+            } else {
+                alert(res.message || 'An unknown error occurred.');
             }
         },
-        complete: function (data) {
-            jQuery('.row-action-trash-loader-' + post_id + '').css('display', 'none');
+        error: function (xhr, status, error) {
+            alert('Network or server error trashing media.\nStatus: ' + status + '\nError: ' + error
+                + (xhr.responseText ? '\n\n' + xhr.responseText.substring(0, 400) : ''));
+        },
+        complete: function () {
+            jQuery('.row-action-trash-loader-' + post_id).css('display', 'none');
         }
     });
 }
@@ -429,10 +523,12 @@ function fn_wmh_copy_clipbord(image_url, post_id) {
 function fn_wmh_media_url_copy(media_url, post_id) {
     var copied = fn_wmh_copy_text(media_url);
     if (copied) {
-        var html = '<p style="color:green;">' + wmhObj.msg_array.msg_1 + '&nbsp<i class="fa-solid fa-check"></i></p>';
-        jQuery('.media-url-' + post_id + '').html(html);
+        var $p = jQuery('<p style="color:green;"></p>');
+        $p.text(wmhObj.msg_array.msg_1 + '\u00a0');
+        $p.append('<i class="fa-solid fa-check" aria-hidden="true"></i>');
+        jQuery('.media-url-' + post_id).empty().append($p);
         setTimeout(function () {
-            jQuery('.media-url-' + post_id + '').text(media_url);
+            jQuery('.media-url-' + post_id).text(media_url);
         }, 1000);
     }
 }
@@ -546,6 +642,13 @@ jQuery(document).on('click', '#filter-submit', function (e) {
 /* Bulk media top selector delete. */
 jQuery(document).on('click', '#doaction', function () {
     var bulk_action_val = jQuery('#bulk-action-selector-top').val().trim();
+    if (bulk_action_val === '' || bulk_action_val === '-1') {
+        return;
+    }
+    if (jQuery('.single-check-image:checked').length === 0) {
+        alert('Please select at least one item before applying a bulk action.');
+        return;
+    }
     if (bulk_action_val != '' && bulk_action_val == 'trash') {
         var chek_box_val = jQuery.map(jQuery('.single-check-image:checked'), function (n, i) {
             return n.value;
@@ -566,12 +669,25 @@ jQuery(document).on('click', '#doaction', function () {
                 size: sizes,
                 nonce: wmhObj.nonce
             },
-            success: function (data) {
-                var data = JSON.parse(data);
-                if (data.flg == '1') {
-                    alert(data.message);
-                    location.reload();
+            timeout: 120000,
+            success: function (raw) {
+                var res;
+                try { res = JSON.parse(raw); } catch (e) {
+                    alert('Unexpected server response. Please check the error log.\n\n' + raw.substring(0, 400));
+                    return;
                 }
+                if (res.flg == 1) {
+                    alert(res.message);
+                    location.reload();
+                } else if (res.flg == -1) {
+                    alert('Error: ' + (res.message || 'Unknown error') + '\n\nPlease check the debug log.');
+                } else {
+                    alert(res.message || 'An unknown error occurred.');
+                }
+            },
+            error: function (xhr, status, error) {
+                alert('Network or server error during bulk trash.\nStatus: ' + status + '\nError: ' + error
+                    + (xhr.responseText ? '\n\n' + xhr.responseText.substring(0, 400) : ''));
             }
         });
     } else if (bulk_action_val != '' && bulk_action_val == 'whitelist') {
@@ -636,12 +752,25 @@ jQuery(document).on('click', '#doaction', function () {
                 nonce: wmhObj.nonce,
                 size: sizes
             },
-            success: function (data) {
-                var data = JSON.parse(data);
-                alert(data.message);
-                if (data.flg == '1') {
-                    location.reload();
+            timeout: 120000,
+            success: function (raw) {
+                var res;
+                try { res = JSON.parse(raw); } catch (e) {
+                    alert('Unexpected server response during restore. Please check the error log.\n\n' + raw.substring(0, 400));
+                    return;
                 }
+                if (res.flg == '1') {
+                    alert(res.message);
+                    window.location.href = '?page=wmh-media-hygiene';
+                } else if (res.flg == '-1' || res.flg == -1) {
+                    alert('Restore error: ' + (res.message || 'Unknown error') + '\n\nPlease check the debug log.');
+                } else {
+                    alert(res.message || 'An unknown error occurred during restore.');
+                }
+            },
+            error: function (xhr, status, error) {
+                alert('Network or server error during bulk restore.\nStatus: ' + status + '\nError: ' + error
+                    + (xhr.responseText ? '\n\n' + xhr.responseText.substring(0, 400) : ''));
             }
         });
     } else if (bulk_action_val != '' && bulk_action_val == 'delete') {
@@ -664,12 +793,25 @@ jQuery(document).on('click', '#doaction', function () {
                 size: sizes,
                 nonce: wmhObj.nonce
             },
-            success: function (data) {
-                var data = JSON.parse(data);
-                if (data.flg == '1') {
-                    alert(data.message);
-                    location.reload();
+            timeout: 120000,
+            success: function (raw) {
+                var res;
+                try { res = JSON.parse(raw); } catch (e) {
+                    alert('Unexpected server response. Please check the error log.\n\n' + raw.substring(0, 400));
+                    return;
                 }
+                if (res.flg == 1) {
+                    alert(res.message);
+                    window.location.href = '?page=wmh-media-hygiene';
+                } else if (res.flg == -1) {
+                    alert('Error: ' + (res.message || 'Unknown error') + '\n\nPlease check the debug log.');
+                } else {
+                    alert(res.message || 'An unknown error occurred.');
+                }
+            },
+            error: function (xhr, status, error) {
+                alert('Network or server error during bulk delete.\nStatus: ' + status + '\nError: ' + error
+                    + (xhr.responseText ? '\n\n' + xhr.responseText.substring(0, 400) : ''));
             }
         });
     } else {
@@ -730,6 +872,31 @@ jQuery("#mh-analytics-switch").on('change', function (e) {
     });
 });
 
+/* opt-in notice — Allow button */
+jQuery(document).on('click', '#wmh-optin-allow', function (e) {
+    e.preventDefault();
+    jQuery('.wmh-optin-loader').css('display', 'inline-block');
+    jQuery('#wmh-optin-allow, #wmh-optin-decline').attr('disabled', true);
+    jQuery.ajax({
+        type: 'POST',
+        url: wmhObj.ajaxurl,
+        data: { action: 'send_data_to_server_action', switch_status: 'on', nonce: wmhObj.nonce },
+        complete: function () { location.reload(); }
+    });
+});
+
+/* opt-in notice — No Thanks button */
+jQuery(document).on('click', '#wmh-optin-decline', function (e) {
+    e.preventDefault();
+    jQuery('.wmh-optin-loader').css('display', 'inline-block');
+    jQuery('#wmh-optin-allow, #wmh-optin-decline').attr('disabled', true);
+    jQuery.ajax({
+        type: 'POST',
+        url: wmhObj.ajaxurl,
+        data: { action: 'send_data_to_server_action', switch_status: 'off', nonce: wmhObj.nonce },
+        complete: function () { location.reload(); }
+    });
+});
 
 /* Delete page media button */
 jQuery(document).on("click", "#trash-page-media-button", function (e) {
@@ -753,30 +920,37 @@ jQuery(document).on("click", "#trash-page-media-button", function (e) {
                 type: "POST",
                 url: wmhObj.ajaxurl,
                 data: data,
+                timeout: 120000,
                 beforeSend: function () {
-                    jQuery(".trash-page-media-loader").css(
-                        "display",
-                        "inline-block"
-                    );
+                    jQuery(".trash-page-media-loader").css("display", "inline-block");
                 },
-                success: function (res) {
-                    var res = JSON.parse(res);
-                    if (res.flg == "1") {
-                        alert(res.message);
+                success: function (raw) {
+                    var res;
+                    try { res = JSON.parse(raw); } catch (e) {
+                        alert('Unexpected server response. Please check the error log.\n\n' + raw.substring(0, 400));
+                        return;
+                    }
+                    if (res.flg == 1) {
+                        sessionStorage.setItem('wmh_trash_notice', JSON.stringify({
+                            message: res.message,
+                            count: res.trashed_count || 0
+                        }));
                         location.reload();
-                    } else if (res.flg == "0") {
-                        alert(res.message);
+                    } else if (res.flg == -1) {
+                        alert('Error: ' + (res.message || 'Unknown error') + '\n\nPlease check the debug log.');
+                    } else {
+                        alert(res.message || 'An unknown error occurred.');
                     }
                 },
-                complete: function (res) {
-                    jQuery('#scan-button').removeAttr('disabled');
-                    jQuery('#scan-button').css('cursor', '');
-                    jQuery('#delete-all-media-button').removeAttr('disabled');
-                    jQuery('#delete-all-media-button').css('cursor', '');
-                    jQuery('#trash-page-media-button').removeAttr('disabled');
-                    jQuery('#trash-page-media-button').css('cursor', '');
-                    jQuery('#create-page-zip-button').removeAttr('disabled');
-                    jQuery('#create-page-zip-button').css('cursor', '');
+                error: function (xhr, status, error) {
+                    alert('Network or server error trashing page media.\nStatus: ' + status + '\nError: ' + error
+                        + (xhr.responseText ? '\n\n' + xhr.responseText.substring(0, 400) : ''));
+                },
+                complete: function () {
+                    jQuery('#scan-button').removeAttr('disabled').css('cursor', '');
+                    jQuery('#delete-all-media-button').removeAttr('disabled').css('cursor', '');
+                    jQuery('#trash-page-media-button').removeAttr('disabled').css('cursor', '');
+                    jQuery('#create-page-zip-button').removeAttr('disabled').css('cursor', '');
                     jQuery(".trash-page-media-loader").css("display", "none");
                 },
             });
@@ -958,11 +1132,7 @@ function fnWmhBulkTrashRestore(data) {
                 fnWmhBulkTrashRestore(data);
             } else if (res.flg == 2) {
                 alert(res.message);
-                jQuery('.bulk-restore-loader').css('display', 'none');
-                jQuery('.wmh-bulk-restore-message').text('Updating statistics information ... (2/2)');
-                let statisticsAjaxCall = 1;
-                fnFetchStatisticsData(statisticsAjaxCall);
-
+                window.location.href = '?page=wmh-media-hygiene';
             }
         },
     });
@@ -979,18 +1149,31 @@ function fn_wmh_delete_permanently_single_image(post_id = '', file_size = '') {
         type: 'POST',
         url: wmhObj.ajaxurl,
         data: data,
+        timeout: 60000,
         beforeSend: function () {
-            jQuery('.delete-loader-' + post_id + '').css('display', 'inline-block');
+            jQuery('.delete-loader-' + post_id).css('display', 'inline-block');
         },
-        success: function (data) {
-            var data = JSON.parse(data);
-            alert(data.message);
-            if (data.flg == '1') {
+        success: function (raw) {
+            var res;
+            try { res = JSON.parse(raw); } catch (e) {
+                alert('Unexpected server response. Please check the error log.\n\n' + raw.substring(0, 400));
+                return;
+            }
+            if (res.flg == 1) {
+                alert(res.message);
                 location.reload();
+            } else if (res.flg == -1) {
+                alert('Error: ' + (res.message || 'Unknown error') + '\n\nPlease check the debug log.');
+            } else {
+                alert(res.message || 'An unknown error occurred.');
             }
         },
-        complete: function (data) {
-            jQuery('.delete-loader-' + post_id + '').css('display', 'none');
+        error: function (xhr, status, error) {
+            alert('Network or server error deleting media.\nStatus: ' + status + '\nError: ' + error
+                + (xhr.responseText ? '\n\n' + xhr.responseText.substring(0, 400) : ''));
+        },
+        complete: function () {
+            jQuery('.delete-loader-' + post_id).css('display', 'none');
         }
     });
 }
@@ -1007,31 +1190,45 @@ function fnWmhBulkDeletePermanently(data) {
         type: 'POST',
         url: wmhObj.ajaxurl,
         data: data,
+        timeout: 120000,
         beforeSend: function () {
             jQuery('.bulk-delete-permanently-loader').css('display', 'inline-block');
             jQuery('.wmh-delete-permanently-progress-bar').css('display', 'flex');
             jQuery('.wmh-delete-permanently-message').css('display', 'inline-block').text('Deleting ... (1/2)');
         },
-        success: function (res) {
-            var res = JSON.parse(res);
-            var progressBar = res.progress_bar;
+        success: function (raw) {
+            var res;
+            try { res = JSON.parse(raw); } catch (e) {
+                jQuery('.bulk-delete-permanently-loader').css('display', 'none');
+                jQuery('#wmh-delete-permanently-btn').prop('disabled', false);
+                alert('Unexpected server response. Please check the error log.\n\n' + raw.substring(0, 400));
+                return;
+            }
+            var progressBar = res.progress_bar || 0;
             jQuery('.wmh-delete-permanently-progress-bar div').text(progressBar + '%').css('width', progressBar + '%');
+
             if (res.flg == 0) {
+                jQuery('.bulk-delete-permanently-loader').css('display', 'none');
                 alert(res.message);
                 location.reload();
             } else if (res.flg == 1) {
-                var ajax_call = res.ajax_call;
-                jQuery('#wmh-delete-permanently-ajax-call').val(ajax_call);
-                var data = jQuery('#wmh-delete-permanently-form').serialize();
-                fnWmhBulkDeletePermanently(data);
+                jQuery('#wmh-delete-permanently-ajax-call').val(res.ajax_call);
+                var next = jQuery('#wmh-delete-permanently-form').serialize();
+                fnWmhBulkDeletePermanently(next);
             } else if (res.flg == 2) {
                 alert(res.message);
+                window.location.href = '?page=wmh-media-hygiene';
+            } else if (res.flg == -1) {
                 jQuery('.bulk-delete-permanently-loader').css('display', 'none');
-                jQuery('.wmh-bulk-delete-permanently-message').text('Updating statistics information ... (2/2)');
-                let statisticsAjaxCall = 1;
-                fnFetchStatisticsData(statisticsAjaxCall);
-
+                jQuery('#wmh-delete-permanently-btn').prop('disabled', false);
+                alert('Error: ' + (res.message || 'Unknown error') + '\n\nPlease check the debug log.');
             }
         },
+        error: function (xhr, status, error) {
+            jQuery('.bulk-delete-permanently-loader').css('display', 'none');
+            jQuery('#wmh-delete-permanently-btn').prop('disabled', false);
+            alert('Network or server error during bulk delete permanently.\nStatus: ' + status + '\nError: ' + error
+                + (xhr.responseText ? '\n\n' + xhr.responseText.substring(0, 400) : ''));
+        }
     });
 }

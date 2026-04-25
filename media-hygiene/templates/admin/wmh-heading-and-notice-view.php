@@ -110,108 +110,95 @@ $wmh_plugin_db_version_upgrade = get_option('wmh_plugin_db_version_upgrade');
     <div class="col-md-12 px-0">
 
         <!-- database version alert -->
-        <?php if (isset($wmh_plugin_db_version) && ( $wmh_plugin_db_version == '2.0.0' || $wmh_plugin_db_version <= '2000' )&& $wmh_plugin_db_version_upgrade == false && $wmh_plugin_db_version_upgrade != 1) {  ?>
+        <?php if (isset($wmh_plugin_db_version) && ($wmh_plugin_db_version == '2.0.0' || $wmh_plugin_db_version <= '2000') && $wmh_plugin_db_version_upgrade == false && $wmh_plugin_db_version_upgrade != 1) {  ?>
 
-        <div class="notice notice-alert notice-error mb-0">
-            <p>
-                <strong>
-                    <?php _e('Media Hygiene database update required.', MEDIA_HYGIENE); ?>
-                </strong>
-            </p>
-            <p>
-                <?php _e('Media Hygiene has been updated! To keep things running smoothly, we have to update your database to the newest version. The database process will run instantly and may not take time. The database process will only check for plugin tables and will not effect any other tables. If you don\'t see scan button, please upgrade the Media Hygiene Database to enable. So please be patience.', MEDIA_HYGIENE); ?>
-            </p>
-            <p>
-            <form id="wmh-database-update-from">
-                <input type="hidden" name="action" value="database_update_wmh_by_version">
-                <input type="hidden" name="nonce" value="<?php echo esc_attr(wp_create_nonce('database_update_wmh_by_version_nonce')); ?>">
-                <button class="button button-primary wmh-update-database-btn-highlight" id="wmh-update-database">
-                    <i class="fa-solid fa-spinner fa-spin wmh-update-database-loader" style="display:none;"></i>&nbsp;
-                    <?php _e('Update Media Hygiene Database', MEDIA_HYGIENE); ?>
-                </button>
-            </form>
-            </p>
-        </div>
+            <div class="notice notice-alert notice-error mb-0">
+                <p>
+                    <strong>
+                        <?php _e('Media Hygiene database update required.', MEDIA_HYGIENE); ?>
+                    </strong>
+                </p>
+                <p>
+                    <?php _e('Media Hygiene has been updated! To keep things running smoothly, we have to update your database to the newest version. The database process will run instantly and may not take time. The database process will only check for plugin tables and will not effect any other tables. If you don\'t see scan button, please upgrade the Media Hygiene Database to enable. So please be patience.', MEDIA_HYGIENE); ?>
+                </p>
+                <p>
+                <form id="wmh-database-update-from">
+                    <input type="hidden" name="action" value="database_update_wmh_by_version">
+                    <input type="hidden" name="nonce" value="<?php echo esc_attr(wp_create_nonce('database_update_wmh_by_version_nonce')); ?>">
+                    <button class="button button-primary wmh-update-database-btn-highlight" id="wmh-update-database">
+                        <i class="fa-solid fa-spinner fa-spin wmh-update-database-loader" style="display:none;"></i>&nbsp;
+                        <?php _e('Update Media Hygiene Database', MEDIA_HYGIENE); ?>
+                    </button>
+                </form>
+                </p>
+            </div>
 
         <?php }  ?>
 
         <!-- notice alert -->
-        <div class="notice notice-alert notice-error mb-0">
+        <div class="notice notice-warning wmh-notice-backup mb-0">
             <p>
-                <b class="important-notice">
-                    <?php _e('IMPORTANT NOTICE:',  MEDIA_HYGIENE); ?>
-                </b>
-                <?php
-                _e('<b class="important-notice-text">Before using this plugin, make sure you have a proper backup of your website</b>.<br>Use Media Hygiene with caution (and always backup first). The dynamic nature of WordPress and its theme and plugin ecosystem may result in mislabelling files for deletion. If you experience an issue, please contact our support team via WordPress Repository. Our premium version provides additional features, direct access to the support team within the plugin, and disabling this warning message. We are committed to continuously improving Media Hygiene. If you enjoy it, please leave us a <a href="https://wordpress.org/support/plugin/media-hygiene/reviews/#new-post" target="_blank">review</a>. Thank you for choosing our plugin to keep your media library clean and tidy.', MEDIA_HYGIENE);
-                ?>
+                <span class="wmh-notice-icon"><i class="fa-solid fa-shield-halved"></i></span>
+                <b><?php _e('Always backup before making changes.', MEDIA_HYGIENE); ?></b>
+                <?php _e('Media Hygiene scans your library for unused files, but the dynamic nature of WordPress (themes, plugins, custom fields) means some files may be incorrectly flagged. Review items carefully before deleting.', MEDIA_HYGIENE); ?>
+                <a href="https://wordpress.org/support/plugin/media-hygiene/reviews/#new-post" target="_blank"><?php _e('Leave a review', MEDIA_HYGIENE); ?></a>
+                <?php _e('if you find it useful — it helps a lot. Upgrade to', MEDIA_HYGIENE); ?>
+                <a href="https://mediahygiene.com/pricing/" target="_blank"><?php _e('Media Hygiene Pro', MEDIA_HYGIENE); ?></a>
+                <?php _e('to dismiss this notice and unlock advanced features.', MEDIA_HYGIENE); ?>
             </p>
         </div>
 
         <!-- scan status notice -->
         <?php if (isset($scan_status) && ($scan_status == '0' || $scan_status == '')) { ?>
-            <div class="notice notice-alert notice-error mb-0">
+            <div class="notice notice-info wmh-notice-scan mb-0">
                 <p>
-                    <b class="important-notice">
-                        <?php _e('IMPORTANT NOTICE:',  MEDIA_HYGIENE); ?>
-                    </b>
-                    <?php
-                    _e('It seems that a scan has not been performed yet. Depending on the server and size of your site, it may take some time to complete a scan. Please initiate a scan and be patient.', MEDIA_HYGIENE);
-                    ?>
+                    <span class="wmh-notice-icon"><i class="fa-solid fa-magnifying-glass"></i></span>
+                    <b><?php _e('No scan has been run yet.', MEDIA_HYGIENE); ?></b>
+                    <?php _e('Click the <strong>Scan</strong> button to analyze your media library. Scan time depends on your server and the number of media files — please be patient and do not close the window until it completes.', MEDIA_HYGIENE); ?>
                 </p>
             </div>
         <?php } ?>
         <!-- Upgrade Notice -->
         <?php if (isset($wmh_scan_status_new) && ($wmh_scan_status_new == '0' || $wmh_scan_status_new == '') && get_option('wmh_database_version') == '1000') { ?>
-            <div class="notice notice-alert notice-error mb-0">
+            <div class="notice notice-info wmh-notice-db mb-0">
                 <p>
-                    <b class="important-notice">
-                        <?php _e('NOTICE:',  MEDIA_HYGIENE); ?>
-                    </b>
-                    <b><?php _e('We\'ve recently upgraded our plugin\'s database, and it\'s essential to perform a scan for optimal functionality. This scan will detect any potential issues, apply necessary updates, and ensure a seamless experience with our plugin. You can continue using the plugin without interruptions. If you have any questions or need assistance, feel free to reach out to our support team.', MEDIA_HYGIENE);
-                        ?></b>
+                    <span class="wmh-notice-icon"><i class="fa-solid fa-rotate"></i></span>
+                    <b><?php _e('A new scan is recommended after the recent database upgrade.', MEDIA_HYGIENE); ?></b>
+                    <?php _e('The plugin database has been updated. Running a fresh scan ensures everything is detected correctly. You can continue using the plugin in the meantime.', MEDIA_HYGIENE); ?>
                 </p>
             </div>
         <?php } ?>
         <!-- Premium plugin and theme installed info -->
         <?php if ($pro_plugin_installed === true) { ?>
-            <div class="notice notice-info mb-0">
+            <div class="notice notice-info wmh-notice-compat mb-0">
                 <p>
-                    <b class="important-notice">
-                        <?php _e('ATTENTION:',  MEDIA_HYGIENE); ?>
-                    </b>
-                    <?php
-                    _e('Media Hygiene (Free) has detected the following plugins installed:  Please upgrade to the <a href="https://mediahygiene.com/pricing/" target="_blank">pro</a> version to detect unused images in these plugins. Please backup your website and use caution when selecting media files for deletion.', MEDIA_HYGIENE);
-                    ?>
+                    <span class="wmh-notice-icon"><i class="fa-solid fa-puzzle-piece"></i></span>
+                    <b><?php _e('Premium plugins detected.', MEDIA_HYGIENE); ?></b>
+                    <?php _e('The free version may not detect unused media inside these plugins. Upgrade to', MEDIA_HYGIENE); ?>
+                    <a href="https://mediahygiene.com/pricing/" target="_blank"><?php _e('Media Hygiene Pro', MEDIA_HYGIENE); ?></a>
+                    <?php _e('for full compatibility:', MEDIA_HYGIENE); ?>
                 </p>
-                <?php
-                _e($pro_plugin_list_html, MEDIA_HYGIENE);
-                ?>
+                <?php echo $pro_plugin_list_html; ?>
             </div>
         <?php } ?>
 
-        <!-- anonymous analytics permission notice -->
-        <?php
-        if ($wmh_close_analytics_permission_permanently != 'Yes') {
-            if ($permission_for_send_data == 'on') {
-        ?>
-                <div class="notice notice-info is-dismissible analyzing-notice mb-0">
+        <!-- anonymous analytics opt-in / status notice -->
+        <?php if ($wmh_close_analytics_permission_permanently != 'Yes') {
+            if ($permission_for_send_data === 'pending' || $permission_for_send_data === false || $permission_for_send_data === '') { ?>
+                <div class="notice notice-info analyzing-notice is-dismissible wmh-notice-optin mb-0">
                     <p>
-                        <b class="important-notice-text">
-                            <?php _e('DATA PRIVACY:',  MEDIA_HYGIENE); ?>
-                        </b>
-                        <?php
-                        _e('Media Hygiene\'s plugin optimizes your WordPress media library by analyzing the types and sizes of media files. This data is vital for enhancing your library\'s organization and performance. If you wish to adjust the data collection settings, you can do so at any time by clicking through to the settings page. We are committed to respecting your data preferences.', MEDIA_HYGIENE);
-                        ?>
-                        <!--
-                    <button class="button" id="wmh-aap-btn">
-                        <?php
-                        //_e('No', MEDIA_HYGIENE);
-                        ?>
-                    </button> -->
-
+                        <span class="wmh-notice-icon"><i class="fa-solid fa-lock"></i></span>
+                        <b><?php _e('Help improve Media Hygiene?', MEDIA_HYGIENE); ?></b>
+                        <?php _e('Allow Media Hygiene to collect anonymous data about media file types and sizes. No personal data, filenames, or identifying information is ever sent.', MEDIA_HYGIENE); ?>
+                    </p>
+                    <p>
+                        <button id="wmh-optin-allow" class="button button-primary"><?php _e('Yes, allow', MEDIA_HYGIENE); ?></button>
+                        &nbsp;
+                        <button id="wmh-optin-decline" class="button"><?php _e('No thanks', MEDIA_HYGIENE); ?></button>
+                        <i class="fa-solid fa-spinner fa-spin wmh-optin-loader" style="display:none; margin-left:8px;"></i>
                     </p>
                 </div>
-        <?php }
+            <?php }
         } ?>
     </div>
 </div>

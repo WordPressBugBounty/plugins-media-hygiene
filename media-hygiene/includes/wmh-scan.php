@@ -81,6 +81,14 @@ class wmh_scan
 		add_action('wp_ajax_fetch_data_from_elementor', array($this, 'fn_wmh_fetch_data_from_elementor'));
 	}
 
+	/* Write to debug log when WP_DEBUG and WP_DEBUG_LOG are both true. */
+	private function fn_wmh_log( $context, $message )
+	{
+		if ( defined('WP_DEBUG') && WP_DEBUG && defined('WP_DEBUG_LOG') && WP_DEBUG_LOG ) {
+			error_log( '[Media Hygiene][' . $context . '] ' . $message );
+		}
+	}
+
 	public function fn_wmh_scan_unused_images()
 	{
 		if (!current_user_can('manage_options')) {
@@ -90,7 +98,7 @@ class wmh_scan
 		/* check nonce here. */
 		$wp_nonce = sanitize_text_field($_POST['nonce']);
 		if (!wp_verify_nonce($wp_nonce, 'scan_unused_images_nonce')) {
-			die(esc_html(__('Security check. Hacking not allowed', MEDIA_HYGIENE)));
+			wp_die(esc_html__('Security check. Hacking not allowed', MEDIA_HYGIENE), '', array('response' => 403));
 		}
 
 		$ajax_call = (int) sanitize_text_field($_POST['ajax_call']);
@@ -274,7 +282,7 @@ class wmh_scan
 		/* check nonce here. */
 		$wp_nonce = sanitize_text_field($_POST['nonce']);
 		if (!wp_verify_nonce($wp_nonce, 'media_hygiene_nonce')) {
-			die(esc_html(__('Security check. Hacking not allowed', MEDIA_HYGIENE)));
+			wp_die(esc_html__('Security check. Hacking not allowed', MEDIA_HYGIENE), '', array('response' => 403));
 		}
 
 		/* default response */
@@ -509,12 +517,14 @@ class wmh_scan
 			'post'
 		);
 
-		$results = get_posts([
-			'post_type' => $default_post_type,
-			'fields' => 'ids',
-			'posts_per_page'  => -1,
-			'post_status' => array('publish', 'draft')
-		]);
+		global $wpdb;
+		$post_types_in = implode(',', array_fill(0, count($default_post_type), '%s'));
+		$results = $wpdb->get_col(
+			$wpdb->prepare(
+				"SELECT ID FROM {$wpdb->posts} WHERE post_type IN ($post_types_in) AND post_status IN ('publish','draft') ORDER BY ID ASC",
+				...$default_post_type
+			)
+		);
 
 		if (!empty($results)) {
 			foreach ($results as $id) {
@@ -1135,12 +1145,28 @@ class wmh_scan
 
 		$wp_nonce = isset($_POST["nonce"]) ? sanitize_text_field($_POST["nonce"]) : '';
 		if (!wp_verify_nonce($wp_nonce, "media_hygiene_nonce")) {
+			$this->fn_wmh_log('row_action_trash', 'Nonce verification failed.');
 			wp_die(esc_html__('Security check. Hacking not allowed', MEDIA_HYGIENE), '', array('response' => 403));
 		}
 
+		@set_time_limit(300);
+
 		if (isset($_POST['action']) && sanitize_text_field($_POST['action']) == 'row_action_trash') {
-			$post_id = sanitize_text_field($_POST['post_id']);
-			$media_size = sanitize_text_field($_POST['file_size']);
+			$post_id    = isset($_POST['post_id']) ? (int) $_POST['post_id'] : 0;
+			$media_size = isset($_POST['file_size']) ? sanitize_text_field($_POST['file_size']) : 0;
+
+			if ($post_id <= 0) {
+				$this->fn_wmh_log('row_action_trash', 'Invalid post_id received.');
+				echo json_encode(['flg' => -1, 'message' => esc_html__('Invalid media ID.', MEDIA_HYGIENE)]);
+				wp_die();
+			}
+
+			if (get_post_type($post_id) !== 'attachment') {
+				$this->fn_wmh_log('row_action_trash', "post_id={$post_id} is not an attachment.");
+				echo json_encode(['flg' => -1, 'message' => esc_html__('Item is not a valid media attachment.', MEDIA_HYGIENE)]);
+				wp_die();
+			}
+
 			$trashed_from_media_posts = wp_trash_post($post_id);
 			if ($trashed_from_media_posts) {
 				$this->conn->delete($this->wmh_unused_media_post_id, array('post_id' => $post_id));
@@ -1150,21 +1176,10 @@ class wmh_scan
 					'size' => $media_size
 				);
 				$this->fn_wmh_update_statistics_data_on_delete($update_statistics_array);
-				$flg = 1;
-				$message = esc_html(__('File trashed successfully.', MEDIA_HYGIENE));
-				$output = array(
-					'flg' => $flg,
-					'message' => $message
-				);
-				echo json_encode($output);
+				echo json_encode(['flg' => 1, 'message' => esc_html__('File trashed successfully.', MEDIA_HYGIENE)]);
 			} else {
-				$flg = 0;
-				$message = esc_html(__('There is an error for trash media.', MEDIA_HYGIENE));
-				$output = array(
-					'flg' => $flg,
-					'message' => $message
-				);
-				echo json_encode($output);
+				$this->fn_wmh_log('row_action_trash', "wp_trash_post failed for post_id={$post_id}.");
+				echo json_encode(['flg' => 0, 'message' => esc_html__('There was an error trashing this media file.', MEDIA_HYGIENE)]);
 			}
 		}
 		wp_die();
@@ -1189,73 +1204,127 @@ class wmh_scan
 
 	public function fn_wmh_trash_page_media()
 	{
-
 		if (!current_user_can('manage_options')) {
 			wp_send_json_error(null, 403);
 		}
 
-		/* check nonce here. */
-		$wp_nonce = sanitize_text_field($_POST['nonce']);
+		$wp_nonce = sanitize_text_field($_POST['nonce'] ?? '');
 		if (!wp_verify_nonce($wp_nonce, 'trash_page_media_nonce')) {
-			die(esc_html(__('Security check. Hacking not allowed', MEDIA_HYGIENE)));
+			$this->fn_wmh_log('trash_page_media', 'Nonce verification failed.');
+			wp_die(esc_html__('Security check. Hacking not allowed', MEDIA_HYGIENE), '', array('response' => 403));
 		}
 
-		/* default */
-		$flg = 0;
-		$message = esc_html(__('Something is wrong to trash page media', MEDIA_HYGIENE));
+		@set_time_limit(300);
 
 		$wmh_scan_option_data = get_option('wmh_scan_option_data', true);
 		$media_per_page_input = 10;
-		if (isset($wmh_scan_option_data['media_per_page_input']) && ($wmh_scan_option_data['media_per_page_input'] != '' || $wmh_scan_option_data['media_per_page_input'] != 0)) {
-			$media_per_page_input = $wmh_scan_option_data['media_per_page_input'];
+		if (isset($wmh_scan_option_data['media_per_page_input']) && $wmh_scan_option_data['media_per_page_input'] != '' && $wmh_scan_option_data['media_per_page_input'] != 0) {
+			$media_per_page_input = (int) $wmh_scan_option_data['media_per_page_input'];
 		}
 
-		/* temp code */
-		$per_post =  $media_per_page_input;
-		$paged = sanitize_text_field($_POST['paged']);
-		$offset = $per_post * ($paged - 1);
-		$trashed_post_id_sql = ' SELECT post_id, size FROM ' . $this->wmh_unused_media_post_id . ' LIMIT ' . $per_post . ' OFFSET ' . $offset . '';
-		$trashed_post_id_results = $this->conn->get_results($trashed_post_id_sql,  ARRAY_A);
-		$trashed_display_size = array();
-		if (isset($trashed_post_id_results) && !empty($trashed_post_id_results)) {
-			foreach ($trashed_post_id_results as $id) {
-				$post_id = $id['post_id'];
-				array_push($trashed_display_size, $id['size']);
-				$trashed_from_media_posts = wp_trash_post($post_id);
-				if ($trashed_from_media_posts) {
-					$this->conn->delete($this->wmh_unused_media_post_id, array('post_id' => $post_id));
-				} else {
-					$module = 'Scan trash page media';
-					$error = 'Attachment not trashed for trash page media';
-					$wmh_general = new wmh_general();
-					$wmh_general->fn_wmh_error_log($module, $error);
-				}
+		$per_post = $media_per_page_input;
+		$paged    = absint($_POST['paged'] ?? 1);
+		if ($paged < 1) { $paged = 1; }
+		$offset   = $per_post * ($paged - 1);
+
+		$attachment_cat = isset($_POST['attachment_cat']) ? sanitize_text_field($_POST['attachment_cat']) : '';
+		$filter_date    = isset($_POST['date'])           ? sanitize_text_field($_POST['date'])           : '';
+
+		$where_parts  = [];
+		$where_values = [];
+
+		if ($attachment_cat === 'images') {
+			$where_parts[]  = 'p.post_mime_type LIKE %s';
+			$where_values[] = '%image%';
+		} elseif ($attachment_cat === 'documents') {
+			$where_parts[]  = 'p.post_mime_type LIKE %s';
+			$where_values[] = '%application%';
+		} elseif ($attachment_cat === 'audio') {
+			$where_parts[]  = 'p.post_mime_type LIKE %s';
+			$where_values[] = '%audio%';
+		} elseif ($attachment_cat === 'video') {
+			$where_parts[]  = 'p.post_mime_type LIKE %s';
+			$where_values[] = '%video%';
+		} elseif ($attachment_cat === 'others') {
+			foreach (['%image%', '%application%', '%audio%', '%video%'] as $not_mime) {
+				$where_parts[]  = 'p.post_mime_type NOT LIKE %s';
+				$where_values[] = $not_mime;
 			}
-			if (isset($trashed_display_size) && !empty($trashed_display_size)) {
-				$trashed_display_size_count = count($trashed_post_id_results);
-				/* update statistics data */
-				$update_statistics_array = array(
-					'call' => 'page_trash',
-					'count' => (int) $trashed_display_size_count,
-					'size' => array_sum($trashed_display_size)
-				);
-				$this->fn_wmh_update_statistics_data_on_delete($update_statistics_array);
-				$trashed_display_size = size_format(array_sum($trashed_display_size));
-				$flg = 1;
-				$message = esc_html(__('Total images trashed: ' . $trashed_display_size_count . ', Free up space: ' . $trashed_display_size . '', MEDIA_HYGIENE));
-			} else {
-				$flg = 0;
-				$message = esc_html(__('Something is wrong to calcualte size', MEDIA_HYGIENE));
-			}
-		} else {
-			$flg = 0;
-			$message = esc_html(__('There is no unused media to trash.', MEDIA_HYGIENE));
 		}
-		$output = array(
-			'flg' => $flg,
-			'message' => $message
-		);
-		echo json_encode($output);
+
+		if ($filter_date !== '') {
+			$where_parts[]  = 'p.post_date LIKE %s';
+			$where_values[] = '%' . $this->conn->esc_like($filter_date) . '%';
+		}
+
+		if (!empty($where_parts)) {
+			$extra_where = ' AND ' . implode(' AND ', $where_parts);
+			$sql = $this->conn->prepare(
+				'SELECT u.post_id, u.size FROM ' . $this->wmh_unused_media_post_id . ' u
+				 INNER JOIN ' . $this->wp_posts . ' p ON p.ID = u.post_id
+				 WHERE p.post_type = \'attachment\'' . $extra_where . ' LIMIT %d OFFSET %d',
+				...array_merge($where_values, [$per_post, $offset])
+			);
+		} else {
+			$sql = $this->conn->prepare(
+				'SELECT post_id, size FROM ' . $this->wmh_unused_media_post_id . ' LIMIT %d OFFSET %d',
+				$per_post, $offset
+			);
+		}
+		$rows    = $this->conn->get_results($sql, ARRAY_A);
+
+		if (empty($rows)) {
+			echo json_encode(['flg' => 0, 'message' => esc_html__('There is no unused media to trash.', MEDIA_HYGIENE)]);
+			wp_die();
+		}
+
+		$trashed_ids  = [];
+		$size_sum     = 0;
+		foreach ($rows as $row) {
+			$post_id = (int) $row['post_id'];
+			$size_sum += (float) $row['size'];
+			$result  = wp_trash_post($post_id);
+			if ($result) {
+				$trashed_ids[] = $post_id;
+			} else {
+				$this->fn_wmh_log('trash_page_media', "wp_trash_post failed for post_id={$post_id}.");
+				$wmh_general = new wmh_general();
+				$wmh_general->fn_wmh_error_log('Scan trash page media', 'Attachment not trashed for trash page media');
+			}
+		}
+
+		/* Batch DELETE from plugin table for all successfully trashed IDs */
+		if (!empty($trashed_ids)) {
+			$id_ph = implode(',', array_fill(0, count($trashed_ids), '%d'));
+			$this->conn->query(
+				$this->conn->prepare(
+					'DELETE FROM ' . $this->wmh_unused_media_post_id . ' WHERE post_id IN (' . $id_ph . ')',
+					$trashed_ids
+				)
+			);
+		}
+
+		$trashed_count = count($trashed_ids);
+		if ($trashed_count > 0) {
+			$update_statistics_array = [
+				'call'  => 'page_trash',
+				'count' => $trashed_count,
+				'size'  => $size_sum,
+			];
+			$this->fn_wmh_update_statistics_data_on_delete($update_statistics_array);
+			$flg     = 1;
+			$message = sprintf(
+				__('%d file(s) moved to Trash (%s freed from dashboard count).', MEDIA_HYGIENE),
+				$trashed_count,
+				size_format($size_sum)
+			);
+		} else {
+			$flg     = 0;
+			$message = esc_html__('No media files could be trashed on this page.', MEDIA_HYGIENE);
+			$this->fn_wmh_log('trash_page_media', 'No items trashed from page ' . $paged);
+		}
+
+		echo json_encode(['flg' => $flg, 'message' => $message, 'trashed_count' => $trashed_count]);
 		wp_die();
 	}
 
@@ -1493,50 +1562,74 @@ class wmh_scan
 
 		$wp_nonce = isset($_POST["nonce"]) ? sanitize_text_field($_POST["nonce"]) : '';
 		if (!wp_verify_nonce($wp_nonce, "media_hygiene_nonce")) {
+			$this->fn_wmh_log('bulk_action_trash', 'Nonce verification failed.');
 			wp_die(esc_html__('Security check. Hacking not allowed', MEDIA_HYGIENE), '', array('response' => 403));
 		}
 
-		$trashed_display_size = array();
+		@set_time_limit(300);
 
-		/* deafult flg */
-		$flg = 0;
-		$message = __('Something is wrong to trash media', MEDIA_HYGIENE);
+		$flg     = 0;
+		$message = esc_html__('Something went wrong trashing media.', MEDIA_HYGIENE);
 
-		if (isset($_POST['action']) && sanitize_text_field($_POST['action']) == 'bulk_action_trash') {
-			if (isset($_POST['bulk_action_val']) && sanitize_text_field($_POST['bulk_action_val']) == 'trash') {
-				if (isset($_POST['chek_box_val']) && !empty($_POST['chek_box_val'])) {
-					$chek_box_val = rest_sanitize_array($_POST['chek_box_val']);
-					$size_array = [];
-					$size_array = rest_sanitize_array($_POST['size']);
-					foreach ($chek_box_val as $d_id) {
-						$trashed_from_media_posts = wp_trash_post($d_id);
-						if ($trashed_from_media_posts) {
-							$this->conn->delete($this->wmh_unused_media_post_id, array('post_id' => $d_id));
-						} else {
-							$module = 'Scan trash bulk action';
-							$error = 'Attachment not trashed for bulk action trash';
-							$wmh_general = new wmh_general();
-							$wmh_general->fn_wmh_error_log($module, $error);
-						}
-					}
-					$trashed_display_size_count = count($chek_box_val);
-					$update_statistics_array = array(
-						'call' => 'bulk_trash',
-						'count' => (int) $trashed_display_size_count,
-						'size' => array_sum($size_array)
-					);
-					$this->fn_wmh_update_statistics_data_on_delete($update_statistics_array);
-					$trashed_display_size = size_format(array_sum($size_array));
-					$flg = 1;
-					$message = esc_html(__('Total images trashed: ' . $trashed_display_size_count . ', Free up space: ' . $trashed_display_size . '', MEDIA_HYGIENE));
+		if (
+			isset($_POST['action']) && sanitize_text_field($_POST['action']) === 'bulk_action_trash' &&
+			isset($_POST['bulk_action_val']) && sanitize_text_field($_POST['bulk_action_val']) === 'trash' &&
+			isset($_POST['chek_box_val']) && !empty($_POST['chek_box_val'])
+		) {
+			/* Sanitise IDs — cast to int, drop zeros */
+			$raw_ids  = rest_sanitize_array($_POST['chek_box_val']);
+			$post_ids = array_values(array_filter(array_map('intval', $raw_ids)));
+
+			/* Validate sizes as numeric */
+			$size_array = [];
+			foreach (rest_sanitize_array($_POST['size'] ?? []) as $s) {
+				if (is_numeric($s)) { $size_array[] = (float) $s; }
+			}
+
+			if (empty($post_ids)) {
+				echo json_encode(['flg' => -1, 'message' => esc_html__('No valid media IDs received.', MEDIA_HYGIENE)]);
+				wp_die();
+			}
+
+			$trashed_ids = [];
+			foreach ($post_ids as $d_id) {
+				$result = wp_trash_post($d_id);
+				if ($result) {
+					$trashed_ids[] = $d_id;
+				} else {
+					$this->fn_wmh_log('bulk_action_trash', "wp_trash_post failed for post_id={$d_id}.");
+					$wmh_general = new wmh_general();
+					$wmh_general->fn_wmh_error_log('Scan trash bulk action', 'Attachment not trashed for bulk action trash');
 				}
 			}
+
+			/* Batch DELETE from plugin table */
+			if (!empty($trashed_ids)) {
+				$id_ph = implode(',', array_fill(0, count($trashed_ids), '%d'));
+				$this->conn->query(
+					$this->conn->prepare(
+						'DELETE FROM ' . $this->wmh_unused_media_post_id . ' WHERE post_id IN (' . $id_ph . ')',
+						$trashed_ids
+					)
+				);
+			}
+
+			$trashed_count = count($trashed_ids);
+			$update_statistics_array = [
+				'call'  => 'bulk_trash',
+				'count' => $trashed_count,
+				'size'  => array_sum($size_array),
+			];
+			$this->fn_wmh_update_statistics_data_on_delete($update_statistics_array);
+			$flg     = 1;
+			$message = esc_html(sprintf(
+				__('Total images trashed: %d, Free up space: %s', MEDIA_HYGIENE),
+				$trashed_count,
+				size_format(array_sum($size_array))
+			));
 		}
-		$bulk_trash_message_array = array(
-			'flg' => $flg,
-			'message' => $message
-		);
-		echo json_encode($bulk_trash_message_array);
+
+		echo json_encode(['flg' => $flg, 'message' => $message]);
 		wp_die();
 	}
 
@@ -2113,7 +2206,7 @@ class wmh_scan
 		if ($ajax_call == $total_ajax_call) {
 			delete_option('wmh_bulk_restore_total_trash_media');
 			$flg = 2;
-			$message = __('Media restored successfully. Please note that it may take some time to update the dashboard statistics after you click "OK".', MEDIA_HYGIENE);
+			$message = __('Media restored successfully. Please note that it may take some time to update the dashboard statistics after you click OK.', MEDIA_HYGIENE);
 		} else {
 			$ajax_call++;
 			$flg = 1;
@@ -2139,49 +2232,47 @@ class wmh_scan
 
 		$wp_nonce = isset($_POST["nonce"]) ? sanitize_text_field($_POST["nonce"]) : '';
 		if (!wp_verify_nonce($wp_nonce, "media_hygiene_nonce")) {
+			$this->fn_wmh_log('delete_permanently_single', 'Nonce verification failed.');
 			wp_die(esc_html__('Security check. Hacking not allowed', MEDIA_HYGIENE), '', array('response' => 403));
 		}
 
-		$flg = 0;
-		$message = __('Something is wrong to delete media', MEDIA_HYGIENE);
+		$post_id = isset($_POST['post_id']) ? (int) $_POST['post_id'] : 0;
 
-		/* post id */
-		$post_id = isset($_POST['post_id']) ? sanitize_text_field($_POST['post_id']) : 0;
-		/* media size */
-		//$file_size = isset($_POST['file_size']) ? sanitize_text_field($_POST['file_size']) : 0;
-		/* post mime type */
-		$post_mime_type = get_post_mime_type($post_id);
-		/* insert data to trash media */
-		$this->fn_wmh_insert_into_deleted_media_list($post_id, $post_mime_type);
-		/* delet from media */
+		if ($post_id <= 0) {
+			$this->fn_wmh_log('delete_permanently_single', 'Invalid post_id received.');
+			echo json_encode(['flg' => -1, 'message' => esc_html__('Invalid media ID.', MEDIA_HYGIENE)]);
+			wp_die();
+		}
+
+		if (get_post_type($post_id) !== 'attachment') {
+			$this->fn_wmh_log('delete_permanently_single', "post_id={$post_id} is not an attachment.");
+			echo json_encode(['flg' => -1, 'message' => esc_html__('Item is not a valid media attachment.', MEDIA_HYGIENE)]);
+			wp_die();
+		}
+
+		/* Fetch URL BEFORE deletion — wp_get_attachment_url() returns false after the post is deleted */
+		$post_mime_type = sanitize_mime_type(get_post_mime_type($post_id));
+		$guid = str_contains($post_mime_type, 'image')
+			? wp_get_original_image_url($post_id)
+			: wp_get_attachment_url($post_id);
+
 		$deleted_from_media_posts = wp_delete_attachment($post_id, true);
 		if ($deleted_from_media_posts) {
-			$this->conn->delete($this->wmh_unused_media_post_id, array('post_id' => $post_id));
-			/* update statistics data */
-			//$delete_image_count = 1;
-			/* update statistics data */
-			// $update_statistics_array = array(
-			// 	'call' => 'single_delete',
-			// 	'count' => $delete_image_count,
-			// 	'size' => $file_size
-			// );
-			//$this->fn_wmh_update_statistics_data_on_delete($update_statistics_array);
-			$flg = 1;
-			$message = esc_html(__('File deleted successfully.', MEDIA_HYGIENE));
-			$output = array(
-				'flg' => $flg,
-				'message' => $message
-			);
-			echo json_encode($output);
+			/* Log to deleted media AFTER successful delete, using the pre-fetched URL */
+			if ($guid) {
+				$this->conn->insert($this->wmh_deleted_media, [
+					'id'           => '',
+					'post_id'      => $post_id,
+					'url'          => $guid,
+					'date_created' => date('Y-m-d H:i:s'),
+					'date_updated' => date('Y-m-d H:i:s'),
+				]);
+			}
+			$this->conn->delete($this->wmh_unused_media_post_id, ['post_id' => $post_id]);
+			echo json_encode(['flg' => 1, 'message' => esc_html__('File deleted successfully.', MEDIA_HYGIENE)]);
 		} else {
-
-			$flg = 0;
-			$message = esc_html(__('There is an error for delete media.', MEDIA_HYGIENE));
-			$output = array(
-				'flg' => $flg,
-				'message' => $message
-			);
-			echo json_encode($output);
+			$this->fn_wmh_log('delete_permanently_single', "wp_delete_attachment failed for post_id={$post_id}.");
+			echo json_encode(['flg' => 0, 'message' => esc_html__('There was an error deleting this media file.', MEDIA_HYGIENE)]);
 		}
 		wp_die();
 	}
@@ -2194,135 +2285,231 @@ class wmh_scan
 
 		$wp_nonce = isset($_POST["nonce"]) ? sanitize_text_field($_POST["nonce"]) : '';
 		if (!wp_verify_nonce($wp_nonce, "media_hygiene_nonce")) {
+			$this->fn_wmh_log('bulk_action_delete', 'Nonce verification failed.');
 			wp_die(esc_html__('Security check. Hacking not allowed', MEDIA_HYGIENE), '', array('response' => 403));
 		}
 
-		$deleted_display_size = array();
+		@set_time_limit(300);
 
-		/* deafult flg */
-		$flg = 0;
-		$message = __('Something is wrong to trash media', MEDIA_HYGIENE);
+		$flg     = 0;
+		$message = esc_html__('Something went wrong deleting media.', MEDIA_HYGIENE);
 
-		if (isset($_POST['bulk_action_val']) && sanitize_text_field($_POST['bulk_action_val']) == 'delete') {
-			if (isset($_POST['chek_box_val']) && !empty($_POST['chek_box_val'])) {
-				/* check box value */
-				$chek_box_val = rest_sanitize_array($_POST['chek_box_val']);
-				/* size */
-				$size_array = [];
-				$size_array = rest_sanitize_array($_POST['size']);
-				foreach ($chek_box_val as $d_id) {
-					/* attachment id */
-					$attachment_id = $d_id;
-					/* post mime type */
-					$post_mime_type = sanitize_mime_type(get_post_mime_type($attachment_id));
-					/* insert data to deleted media */
-					$this->fn_wmh_insert_into_deleted_media_list($attachment_id, $post_mime_type);
-					/* delete from media. */
-					$deleted_from_media_posts = wp_delete_attachment($d_id, true);
-					if ($deleted_from_media_posts) {
-						/* delete from custom table that we created 'wmh_unused_media_post_id'. */
-						$this->conn->delete($this->wmh_unused_media_post_id, array('post_id' => $d_id));
-					} else {
-						$module = 'Scan delete bulk action';
-						$error = 'Attachment not deleted for bulk action delete';
-						$wmh_general = new wmh_general();
-						$wmh_general->fn_wmh_error_log($module, $error);
-					}
-				}
-				/* count media */
-				$deleted_display_size_count = count($chek_box_val);
-				/* update statistics data */
-				// $update_statistics_array = array(
-				// 	'call' => 'bulk_delete',
-				// 	'count' => (int) $deleted_display_size_count,
-				// 	'size' => array_sum($size_array)
-				// );
-				// $this->fn_wmh_update_statistics_data_on_delete($update_statistics_array);
-				$deleted_display_size = size_format(array_sum($size_array));
-				$flg = 1;
-				$message = esc_html(__('Total images trashed: ' . $deleted_display_size_count . ', Free up space: ' . $deleted_display_size . '', MEDIA_HYGIENE));
+		if (
+			isset($_POST['bulk_action_val']) && sanitize_text_field($_POST['bulk_action_val']) === 'delete' &&
+			isset($_POST['chek_box_val']) && !empty($_POST['chek_box_val'])
+		) {
+			/* Sanitise IDs — cast to int, drop zeros */
+			$raw_ids  = rest_sanitize_array($_POST['chek_box_val']);
+			$post_ids = array_values(array_filter(array_map('intval', $raw_ids)));
+
+			/* Validate sizes as numeric */
+			$size_array = [];
+			foreach (rest_sanitize_array($_POST['size'] ?? []) as $s) {
+				if (is_numeric($s)) { $size_array[] = (float) $s; }
 			}
+
+			if (empty($post_ids)) {
+				echo json_encode(['flg' => -1, 'message' => esc_html__('No valid media IDs received.', MEDIA_HYGIENE)]);
+				wp_die();
+			}
+
+			$deleted_ids  = [];
+			$log_rows     = [];
+			$log_values   = [];
+			$now          = date('Y-m-d H:i:s');
+
+			foreach ($post_ids as $d_id) {
+				if (get_post_type($d_id) !== 'attachment') {
+					$this->fn_wmh_log('bulk_action_delete', "post_id={$d_id} is not an attachment, skipping.");
+					continue;
+				}
+
+				$post_mime_type = sanitize_mime_type(get_post_mime_type($d_id));
+
+				/* Fetch URL BEFORE deletion — wp_get_attachment_url returns false after delete */
+				$guid = str_contains($post_mime_type, 'image')
+					? wp_get_original_image_url($d_id)
+					: wp_get_attachment_url($d_id);
+
+				$deleted = wp_delete_attachment($d_id, true);
+				if ($deleted) {
+					$deleted_ids[] = $d_id;
+					if ($guid) {
+						$log_rows[]   = '(%d, %s, %s, %s)';
+						$log_values[] = $d_id;
+						$log_values[] = $guid;
+						$log_values[] = $now;
+						$log_values[] = $now;
+					}
+				} else {
+					$this->fn_wmh_log('bulk_action_delete', "wp_delete_attachment failed for post_id={$d_id}.");
+					$wmh_general = new wmh_general();
+					$wmh_general->fn_wmh_error_log('Scan delete bulk action', 'Attachment not deleted for bulk action delete');
+				}
+			}
+
+			/* Batch INSERT into deleted media log */
+			if (!empty($log_rows)) {
+				$this->conn->query(
+					$this->conn->prepare(
+						'INSERT IGNORE INTO ' . $this->wmh_deleted_media . ' (post_id, url, date_created, date_updated) VALUES ' . implode(',', $log_rows),
+						$log_values
+					)
+				);
+			}
+
+			/* Batch DELETE from plugin table */
+			if (!empty($deleted_ids)) {
+				$id_ph = implode(',', array_fill(0, count($deleted_ids), '%d'));
+				$this->conn->query(
+					$this->conn->prepare(
+						'DELETE FROM ' . $this->wmh_unused_media_post_id . ' WHERE post_id IN (' . $id_ph . ')',
+						$deleted_ids
+					)
+				);
+			}
+
+			$deleted_count = count($deleted_ids);
+			$flg           = 1;
+			$message       = esc_html(sprintf(
+				__('Total images deleted: %d, Free up space: %s', MEDIA_HYGIENE),
+				$deleted_count,
+				size_format(array_sum($size_array))
+			));
 		}
 
-		$bulk_delete_message_array = array(
-			'flg' => $flg,
-			'message' => $message
-		);
-		echo json_encode($bulk_delete_message_array);
+		echo json_encode(['flg' => $flg, 'message' => $message]);
 		wp_die();
 	}
 
 	public function fn_wmh_delete_permanently()
 	{
-
 		if (!current_user_can('manage_options')) {
 			wp_send_json_error(null, 403);
 		}
 
 		$wp_nonce = isset($_POST["nonce"]) ? sanitize_text_field($_POST["nonce"]) : '';
 		if (!wp_verify_nonce($wp_nonce, "wmh_delete_permanently")) {
+			$this->fn_wmh_log('delete_permanently', 'Nonce verification failed.');
 			wp_die(esc_html__('Security check. Hacking not allowed', MEDIA_HYGIENE), '', array('response' => 403));
 		}
 
-		$ajax_call = (int) sanitize_text_field($_POST['ajax_call']);
+		@set_time_limit(300);
 
-		if ($ajax_call == 0) {
-			$trash_media_count = wp_count_attachments()->trash;
-			if ($trash_media_count) {
-				update_option('wmh_bulk_delete_permanently_total_trash_media', $trash_media_count);
-				$ajax_call++;
-				echo json_encode(['flg' => 1, 'ajax_call' => $ajax_call, 'message' => __('Pending ...', MEDIA_HYGIENE), 'progress_bar' => 0]);
-				wp_die();
-			} else {
+		$ajax_call = (int) ($_POST['ajax_call'] ?? 0);
+		$per_post  = 25;
+
+		/* Call 0: initialise — count trashed attachments with a direct SQL query */
+		if ($ajax_call === 0) {
+			$trash_count = (int) $this->conn->get_var(
+				$this->conn->prepare(
+					'SELECT COUNT(*) FROM ' . $this->wp_posts . ' WHERE post_type = %s AND post_status = %s',
+					'attachment', 'trash'
+				)
+			);
+
+			if ($trash_count === 0) {
 				echo json_encode([
-					'flg' => 0,
-					'message' => __('There are currently no media items in the trash.', MEDIA_HYGIENE),
-					'progress_bar' => 0
+					'flg'          => 0,
+					'message'      => esc_html__('There are currently no media items in the trash.', MEDIA_HYGIENE),
+					'progress_bar' => 0,
 				]);
 				wp_die();
 			}
+
+			update_option('wmh_bulk_delete_permanently_total_trash_media', $trash_count, 'no');
+			echo json_encode([
+				'flg'          => 1,
+				'ajax_call'    => 1,
+				'message'      => esc_html__('Pending ...', MEDIA_HYGIENE),
+				'progress_bar' => 0,
+			]);
+			wp_die();
 		}
 
-		$per_post = 25;
-		$posts_count = (int) get_option('wmh_bulk_delete_permanently_total_trash_media');
-		$total_ajax_call = (int) ceil($posts_count / $per_post);
-		$progress_bar = min((($ajax_call / $total_ajax_call) * 100), 100);
-		$progress_bar = number_format($progress_bar, 2);
+		$total_initial    = (int) get_option('wmh_bulk_delete_permanently_total_trash_media', 0);
+		$total_ajax_call  = ($total_initial > 0) ? (int) ceil($total_initial / $per_post) : 1;
 
+		/* Fetch next batch of trashed attachments */
 		$post_ids = get_posts([
 			'post_type'      => 'attachment',
-			'post_status' => 'trash',
+			'post_status'    => 'trash',
 			'posts_per_page' => $per_post,
-			'fields'         => 'ids'
+			'fields'         => 'ids',
 		]);
 
-		if (!empty($post_ids)) {
-			foreach ($post_ids as $a_id) {
-				$deleted_from_media_posts = wp_delete_attachment($a_id, true);
-				if ($deleted_from_media_posts) {
-					$this->conn->delete($this->wmh_unused_media_post_id, array('post_id' => $a_id));
-				}
+		/* Empty batch → all done */
+		if (empty($post_ids)) {
+			delete_option('wmh_bulk_delete_permanently_total_trash_media');
+			echo json_encode([
+				'flg'          => 2,
+				'ajax_call'    => $ajax_call,
+				'message'      => esc_html__('Media deleted successfully. Please note that it may take some time to update the dashboard statistics after you click OK.', MEDIA_HYGIENE),
+				'progress_bar' => 100,
+			]);
+			wp_die();
+		}
+
+		$deleted_ids = [];
+		foreach ($post_ids as $a_id) {
+			$result = wp_delete_attachment((int) $a_id, true);
+			if ($result) {
+				$deleted_ids[] = (int) $a_id;
+			} else {
+				$this->fn_wmh_log('delete_permanently', "wp_delete_attachment failed for post_id={$a_id}.");
 			}
 		}
 
-		if ($ajax_call == $total_ajax_call) {
-			delete_option('wmh_bulk_delete_permanently_total_trash_media');
-			$flg = 2;
-			$message = __('Media deleted successfully. Please note that it may take some time to update the dashboard statistics after you click "OK".', MEDIA_HYGIENE);
-		} else {
-			$ajax_call++;
-			$flg = 1;
-			$message = __('Pending ...', MEDIA_HYGIENE);
+		/* Stuck detection — if nothing was deleted from the plugin table, stop to avoid infinite loop */
+		if (!empty($deleted_ids)) {
+			$id_ph = implode(',', array_fill(0, count($deleted_ids), '%d'));
+			$this->conn->query(
+				$this->conn->prepare(
+					'DELETE FROM ' . $this->wmh_unused_media_post_id . ' WHERE post_id IN (' . $id_ph . ')',
+					$deleted_ids
+				)
+			);
 		}
 
-		$output = [
-			'flg' => $flg,
-			'ajax_call' => $ajax_call,
-			'message' => $message,
+		if (empty($deleted_ids)) {
+			delete_option('wmh_bulk_delete_permanently_total_trash_media');
+			$this->fn_wmh_log('delete_permanently', 'Stuck: wp_delete_attachment returned false for all items in batch at ajax_call=' . $ajax_call);
+			echo json_encode([
+				'flg'     => -1,
+				'message' => esc_html__('Delete operation appears stuck — no items could be deleted in this batch. Please check the error log.', MEDIA_HYGIENE),
+			]);
+			wp_die();
+		}
+
+		/* Server-side progress: count remaining trashed attachments */
+		$remaining    = (int) $this->conn->get_var(
+			$this->conn->prepare(
+				'SELECT COUNT(*) FROM ' . $this->wp_posts . ' WHERE post_type = %s AND post_status = %s',
+				'attachment', 'trash'
+			)
+		);
+		$progress_bar = ($total_initial > 0)
+			? number_format(min((($total_initial - $remaining) / $total_initial) * 100, 100), 2)
+			: 100;
+
+		if ($remaining === 0 || $ajax_call >= $total_ajax_call) {
+			delete_option('wmh_bulk_delete_permanently_total_trash_media');
+			echo json_encode([
+				'flg'          => 2,
+				'ajax_call'    => $ajax_call,
+				'message'      => esc_html__('Media deleted successfully. Please note that it may take some time to update the dashboard statistics after you click OK.', MEDIA_HYGIENE),
+				'progress_bar' => 100,
+			]);
+			wp_die();
+		}
+
+		echo json_encode([
+			'flg'             => 1,
+			'ajax_call'       => $ajax_call + 1,
+			'message'         => esc_html__('Pending ...', MEDIA_HYGIENE),
 			'total_ajax_call' => $total_ajax_call,
-			'progress_bar' => $progress_bar
-		];
-		echo json_encode($output);
+			'progress_bar'    => $progress_bar,
+		]);
 		wp_die();
 	}
 

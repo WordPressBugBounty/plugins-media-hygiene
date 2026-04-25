@@ -22,15 +22,15 @@ class wmh_download_unused_media
     }
 
     public function fn_wmh_create_page_unused_media_zip_action()
-    {   
-        if (!current_user_can('manage_options')) {
-			wp_die(esc_html__('Unauthorized', MEDIA_HYGIENE), '', array('response' => 403));
-		}
-
-        /* check nonce */
-        $nonce = sanitize_text_field($_POST['nonce']);
+    {
+        /* check nonce first */
+        $nonce = isset($_POST['nonce']) ? sanitize_text_field($_POST['nonce']) : '';
         if (!wp_verify_nonce($nonce, 'create_page_unused_media_zip_nonce')) {
             wp_die(esc_html__('Security check. Hacking not allowed', MEDIA_HYGIENE), '', array('response' => 403));
+        }
+
+        if (!current_user_can('manage_options')) {
+            wp_die(esc_html__('Unauthorized', MEDIA_HYGIENE), '', array('response' => 403));
         }
 
         if (!extension_loaded('zip')) {
@@ -44,7 +44,7 @@ class wmh_download_unused_media
                 window.location.href = redirectUrl;
             </script>
 <?php
-            die();
+            wp_die();
         }
 
         /* get scan option data. */
@@ -58,10 +58,12 @@ class wmh_download_unused_media
         $current_page = (int) sanitize_text_field($_POST['paged']);
         $offset = $per_post * ($current_page - 1);
 
-        $paged = $current_page;
+        $paged          = $current_page;
+        $attachment_cat = isset($_POST['attachment_cat']) ? sanitize_text_field($_POST['attachment_cat']) : '';
+        $filter_date    = isset($_POST['date'])           ? sanitize_text_field($_POST['date'])           : '';
 
         /* get unused media result */
-        $unused_media_result = $this->fn_wmh_get_unused_media_result($offset, $per_post);
+        $unused_media_result = $this->fn_wmh_get_unused_media_result($offset, $per_post, $attachment_cat, $filter_date);
         /* creating zip */
         $zip = new ZipArchive;
         /* file name */
@@ -76,16 +78,17 @@ class wmh_download_unused_media
         }
         $dowanload_unused_media_file = $dir . '/' . $filename;
         $zip->open($dowanload_unused_media_file, ZipArchive::CREATE);
+        $upload_dir_info = wp_get_upload_dir();
         if (isset($unused_media_result) && !empty($unused_media_result)) {
-            foreach ($unused_media_result as $file) {
-                $fileContent = file_get_contents($file);
-                if ($fileContent) {
-                    $zip->addFromString(basename($file), $fileContent);
+            foreach ($unused_media_result as $file_url) {
+                $file_path = str_replace( $upload_dir_info['baseurl'], $upload_dir_info['basedir'], $file_url );
+                if ( file_exists($file_path) ) {
+                    $zip->addFile( $file_path, basename($file_path) );
                 }
             }
         } else {
             $module = 'Download unused media';
-            $error = 'unused deleted data not set for creatind zip for download page media';
+            $error = __('Unused media data not set for creating zip for download page media', MEDIA_HYGIENE);
             $wmh_general = new wmh_general();
             $wmh_general->fn_wmh_error_log($module, $error);
         }
@@ -98,7 +101,7 @@ class wmh_download_unused_media
                 } else {
                     $goback_url = sanitize_url(admin_url('admin.php?page=wmh-media-hygiene'));
                     echo '<a href="' . esc_url($goback_url) . '">' . esc_html(__('Go back', MEDIA_HYGIENE)) . '</a><br><br>';
-                    die(esc_html__('The disk space check function is not available on this server. This may be due to hosting restrictions or disabled system functions. Please contact your hosting provider for assistance.', MEDIA_HYGIENE));
+                    wp_die(esc_html__('The disk space check function is not available on this server. This may be due to hosting restrictions or disabled system functions. Please contact your hosting provider for assistance.', MEDIA_HYGIENE));
                 }
             $filesize = filesize($checked_file_path);
             if ($filesize < $dir_space) {
@@ -109,16 +112,56 @@ class wmh_download_unused_media
             } else {
                 $goback_url = sanitize_url(admin_url('admin.php?page=wmh-media-hygiene'));
                 echo '<a href="' . esc_url($goback_url) . '">' . esc_html(__('Go back', MEDIA_HYGIENE)) . '</a><br><br>';
-                die(esc_html(__('Not enough space available to download page media, please go back.', MEDIA_HYGIENE)));
+                wp_die(esc_html(__('Not enough space available to download page media, please go back.', MEDIA_HYGIENE)));
             }
         }
     }
 
-    public function fn_wmh_get_unused_media_result($offset = '', $per_post = '')
+    public function fn_wmh_get_unused_media_result($offset = '', $per_post = '', $attachment_cat = '', $filter_date = '')
     {
+        /* build optional mime-type / date filter via a JOIN on wp_posts */
+        $where_parts  = [];
+        $where_values = [];
+
+        if ($attachment_cat === 'images') {
+            $where_parts[]  = 'p.post_mime_type LIKE %s';
+            $where_values[] = '%image%';
+        } elseif ($attachment_cat === 'documents') {
+            $where_parts[]  = 'p.post_mime_type LIKE %s';
+            $where_values[] = '%application%';
+        } elseif ($attachment_cat === 'audio') {
+            $where_parts[]  = 'p.post_mime_type LIKE %s';
+            $where_values[] = '%audio%';
+        } elseif ($attachment_cat === 'video') {
+            $where_parts[]  = 'p.post_mime_type LIKE %s';
+            $where_values[] = '%video%';
+        } elseif ($attachment_cat === 'others') {
+            foreach (['%image%', '%application%', '%audio%', '%video%'] as $not_mime) {
+                $where_parts[]  = 'p.post_mime_type NOT LIKE %s';
+                $where_values[] = $not_mime;
+            }
+        }
+
+        if ($filter_date !== '') {
+            $where_parts[]  = 'p.post_date LIKE %s';
+            $where_values[] = '%' . $this->conn->esc_like($filter_date) . '%';
+        }
 
         /* get all unused delete media post id from wmh_unused_media_post_id table for download media */
-        $unused_media_sql = $this->conn->prepare('SELECT post_id FROM ' . $this->wmh_unused_media_post_id . ' LIMIT %d OFFSET %d', $per_post, $offset);
+        if (!empty($where_parts)) {
+            $extra_where      = ' AND ' . implode(' AND ', $where_parts);
+            $unused_media_sql = $this->conn->prepare(
+                'SELECT u.post_id FROM ' . $this->wmh_unused_media_post_id . ' u
+                 INNER JOIN ' . $this->wp_posts . ' p ON p.ID = u.post_id
+                 WHERE p.post_type = \'attachment\'' . $extra_where . ' LIMIT %d OFFSET %d',
+                ...array_merge($where_values, [(int) $per_post, (int) $offset])
+            );
+        } else {
+            $unused_media_sql = $this->conn->prepare(
+                'SELECT post_id FROM ' . $this->wmh_unused_media_post_id . ' LIMIT %d OFFSET %d',
+                (int) $per_post, (int) $offset
+            );
+        }
         $unused_media_data = $this->conn->get_results($unused_media_sql, ARRAY_A);
         $unused_media_post_id = array();
         if (isset($unused_media_data) && !empty($unused_media_data)) {

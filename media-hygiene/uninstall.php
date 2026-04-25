@@ -108,6 +108,7 @@ if (isset($wmh_scan_option_data) && !empty($wmh_scan_option_data) && $wmh_scan_o
         delete_option('wmh_dir_scan_complete');
         delete_option('wmh_exclude_directory');
         delete_option('wmh_close_analytics_permission_permanently');
+        delete_option('wmh_analytics_consent_explicit');
         delete_option('wmh_plugin_db_version');
         delete_option('wmh_plugin_db_version_upgrade');
 

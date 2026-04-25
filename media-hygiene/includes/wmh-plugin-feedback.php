@@ -24,7 +24,7 @@ class wmh_plugin_feedback
         /* check nonce here. */
         $wp_nonce = sanitize_text_field($_POST['nonce']);
         if (!wp_verify_nonce($wp_nonce, 'wmh_customer_feedback')) {
-            die(esc_html(__('Security check. Hacking not allowed', MEDIA_HYGIENE)));
+            wp_die(esc_html__('Security check. Hacking not allowed', MEDIA_HYGIENE), '', array('response' => 403));
         }
 
         $process_type = '';
@@ -66,28 +66,31 @@ class wmh_plugin_feedback
                 $body = $feedback_text;
             }
 
-            $user = wp_get_current_user();
-            /* get user email*/
-            $user_email = $user->data->user_email;
-            $display_name = $user->data->display_name;
+            /* only include personal data when the user explicitly opted in */
+            $share_contact = isset($_POST['share_contact']) && sanitize_text_field($_POST['share_contact']) === '1';
 
-            /* get site url */
-            $site_url = site_url();
-            $admin_email = get_option('admin_email');            
+            $display_name = '';
+            $user_email   = '';
+            $site_url     = site_url();
+
+            if ($share_contact) {
+                $user         = wp_get_current_user();
+                $user_email   = $user->data->user_email;
+                $display_name = $user->data->display_name;
+            }
+
             /* send email */
-            $to = array('support@mediahygiene.com');
-            $subject = 'Media Hygiene Free Version Deactivated by '.$site_url.'-'.date('Y-m-d h:i:s', strtotime('now'));
-            $message = '';
-            $message .= '<div>';
-            $message .= '<p><b>Display Name: </b>'.$display_name.'</p>';            
-            $message .= '<p><b>User email: </b>' . $user_email . '</p>';
-            $message .= '<p><b>Site url: </b>' . $site_url . '</p>';
-            $message .= '<p><b>Reason: </b>' . $body . '</p>';
-            $message .= '<p>';
+            $to      = array('support@mediahygiene.com');
+            $subject = 'Media Hygiene Free Version Deactivated - ' . date('Y-m-d h:i:s');
+            $message = '<div>';
+            if ($share_contact) {
+                $message .= '<p><b>Display Name: </b>' . esc_html($display_name) . '</p>';
+                $message .= '<p><b>User email: </b>' . esc_html($user_email) . '</p>';
+                $message .= '<p><b>Site url: </b>' . esc_url($site_url) . '</p>';
+            }
+            $message .= '<p><b>Reason: </b>' . esc_html($body) . '</p>';
             $message .= '</div>';
-            $headers = array(
-                'Content-Type: text/html; charset=UTF-8',
-            );
+            $headers = array('Content-Type: text/html; charset=UTF-8');
             wp_mail($to, $subject, $message, $headers);
         }
 

@@ -4,7 +4,8 @@
 Plugin Name: Media Hygiene
 Plugin URI: https://mediahygiene.com/
 Description: A plugin to remove unused media from WordPress and free up space on hosting.
-Version: 4.0.2
+Version: 5.0.0
+Requires PHP: 8.0
 Author: Media Hygiene
 Author URI: https://mediahygiene.com
 License: Custom license, no Distribution allowed
@@ -19,7 +20,7 @@ class media_hygiene
     {
         /* define */
         define('MEDIA_HYGIENE', 'media-hygiene');
-        define('MH_FILE_VERSION', '4.0.2');
+        define('MH_FILE_VERSION', '5.0.0');
         define('MH_PREFIX', 'wmh_');
         define('MH_FILE_PATH', plugin_dir_path(__FILE__));
         define('MH_FILE_URL', plugin_dir_url(__FILE__));
@@ -51,6 +52,15 @@ class media_hygiene
     {
         if (get_option('wmh_plugin_db_version') === false) {
             update_option('wmh_plugin_db_version', '2.0.0');
+        }
+
+        /* One-time migration: existing users who had analytics silently enabled by default
+         * never gave explicit consent. Reset them to 'pending' so they see the opt-in notice.
+         * Only fires until the user completes the new opt-in flow (sets wmh_analytics_consent_explicit). */
+        if (!get_option('wmh_analytics_consent_explicit')) {
+            if (get_option('wmh_send_data_to_server_permission') === 'on') {
+                update_option('wmh_send_data_to_server_permission', 'pending', 'no');
+            }
         }
     }
 

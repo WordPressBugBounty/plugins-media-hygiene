@@ -38,7 +38,7 @@ class wmh_deleted_media
         /* check nonce here. */
         $wp_nonce = sanitize_text_field($_POST['nonce']);
         if (!wp_verify_nonce($wp_nonce, 'media_hygiene_nonce')) {
-            die(esc_html(__('Security check. Hacking not allowed', MEDIA_HYGIENE)));
+            wp_die(esc_html__('Security check. Hacking not allowed', MEDIA_HYGIENE), '', array('response' => 403));
         }
 
         $data = array();
@@ -57,7 +57,7 @@ class wmh_deleted_media
         /* check nonce here. */
         $wp_nonce = sanitize_text_field($_POST['nonce']);
         if (!wp_verify_nonce($wp_nonce, 'deleted_media_list_nonce')) {
-            die(esc_html(__('Security check. Hacking not allowed', MEDIA_HYGIENE)));
+            wp_die(esc_html__('Security check. Hacking not allowed', MEDIA_HYGIENE), '', array('response' => 403));
         }
 
         /* table name */

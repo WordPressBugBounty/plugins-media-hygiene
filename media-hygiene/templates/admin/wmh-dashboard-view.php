@@ -2,327 +2,220 @@
 
 defined('ABSPATH') or die('Plugin file cannot be accessed directly.');
 
-/* get generel summery data */
+global $wpdb;
 
-/* get total media count */
-$media_count = get_option('wmh_media_count');
-if (isset($media_count) && $media_count != '' && $media_count != 0) {
-	$media_count =  get_option('wmh_media_count');
-} else {
-	$media_count = 0;
-}
-
-/* get total media size. */
-$media_size = get_option('wmh_total_media_size');
-if (isset($media_size) && $media_size != '' && $media_size != 0) {
-	$media_size =  size_format(get_option('wmh_total_media_size'));
-} else {
-	$media_size = 0;
-}
-
-/* get total unused media count */
-$unused_media_count = get_option('wmh_total_unused_media_count');
-if (isset($unused_media_count) && $unused_media_count != '' && $unused_media_count != 0) {
-	$unused_media_count =  get_option('wmh_total_unused_media_count');
+/* get total unused media count - query actual table to avoid drift from incremental updates */
+$wmh_unused_table = $wpdb->prefix . MH_PREFIX . 'unused_media_post_id';
+$unused_table_exists = $wpdb->get_var( "SHOW TABLES LIKE '$wmh_unused_table'" ) == $wmh_unused_table;
+if ( $unused_table_exists ) {
+	$unused_row = $wpdb->get_row( 'SELECT COUNT(post_id) as cnt FROM ' . $wmh_unused_table );
+	$unused_media_count = $unused_row ? (int) $unused_row->cnt : 0;
 } else {
 	$unused_media_count = 0;
 }
 
+/* get total media count - query wp_posts directly to avoid drift */
+$media_count = (int) $wpdb->get_var(
+	"SELECT COUNT(ID) FROM {$wpdb->posts} WHERE post_type = 'attachment' AND post_status = 'inherit'"
+);
+
+/* used media count - derived so it never goes negative */
+$use_media_count = max( 0, $media_count - $unused_media_count );
+
+/* get total media size */
+$media_size = get_option('wmh_total_media_size');
+if ( isset( $media_size ) && $media_size != '' && $media_size != 0 ) {
+	$media_size = size_format( get_option('wmh_total_media_size') );
+} else {
+	$media_size = 0;
+}
+
 /* unused media size */
 $unused_media_size = get_option('wmh_unused_media_size');
-if (isset($unused_media_size) && $unused_media_size != '' && $unused_media_size != 0) {
-	$unused_media_size = size_format(get_option('wmh_unused_media_size'));
+if ( isset( $unused_media_size ) && $unused_media_size != '' && $unused_media_size != 0 ) {
+	$unused_media_size = size_format( get_option('wmh_unused_media_size') );
 } else {
 	$unused_media_size = 0;
 }
 
-/* used media count */
-$use_media_count = get_option('wmh_use_media_count');
-if (isset($use_media_count) && $use_media_count != '' && $use_media_count != 0) {
-	$use_media_count =  get_option('wmh_use_media_count');
-} else {
-	$use_media_count = 0;
-}
-
 /* used media size */
 $use_media_size = get_option('wmh_use_media_size');
-if (isset($use_media_size) && $use_media_size != '' && $use_media_size != 0) {
-	$use_media_size = size_format(get_option('wmh_use_media_size'));
+if ( isset( $use_media_size ) && $use_media_size != '' && $use_media_size != 0 ) {
+	$use_media_size = size_format( get_option('wmh_use_media_size') );
 } else {
 	$use_media_size = 0;
 }
 
-/* get media break down */
+/* get media breakdown */
 $media_breakdown_data = get_option('wmh_media_breakdown');
-if (isset($media_breakdown_data['image_count'])) {
+if ( isset( $media_breakdown_data['image_count'] ) ) {
 	$media_breakdown_data = array();
 }
 
 /* get media type info */
 $media_type_info = get_option('wmh_media_type_info');
-if (isset($media_type_info[0]['media_type_name'])) {
+if ( isset( $media_type_info[0]['media_type_name'] ) ) {
 	$media_type_info = array();
 }
 
-/* get scan status */
-$wmh_scan_status = get_option('wmh_scan_status');
-
-$cat_count = '-';
-$attachment_cat = '-';
-$cat_per = '-';
-
 ?>
 
-<div class="wpm-height">
-	<div class="row row-main" id="wmh-statistics">
-		<div class="col-md-12 px-0">
-			<div class="wmh-dashboard mb-0">
-				<!-- General summary -->
-				<div id="general-summary-accordion" class="admin-accord">
-					<div class="card mt-2">
-						<div class="card-header pt-1 pb-1" id="general-summary">
-							<h5 class="mb-0">
-								<button class="btn btn-link w-100 text-start" data-bs-toggle="collapse" data-bs-target="#general-summary-accordion-content" aria-expanded="true" aria-controls="general-summary-accordion-content">
-									<?php _e('General summary', MEDIA_HYGIENE); ?>
-								</button>
-							</h5>
-						</div>
-						<div id="general-summary-accordion-content" class="collapse show" aria-labelledby="summary" data-parent="#general-summary-accordion">
-							<div class="card-body px-0">
-								<div class="row row-main">
-									<div class="col-xl-4 col-sm-6">
-										<div class="card text-white box mt-0" id="total-media">
-											<div class="card-body text-center">
-												<div class="wmh-ans"><?php echo esc_html($media_count); ?></div>
-												<div class="wmh-title"><?php _e('Total Media', MEDIA_HYGIENE); ?></div>
-											</div>
-										</div>
-									</div>
-									<div class="col-xl-4 col-sm-6">
-										<div class="card text-white box mt-0" id="media-in-use">
-											<div class="card-body text-center">
-												<div class="wmh-ans"><?php echo esc_html($use_media_count); ?></div>
-												<div class="wmh-title"><?php _e('Media In Use', MEDIA_HYGIENE); ?></div>
-											</div>
-										</div>
-									</div>
-									<div class="col-xl-4 col-sm-6">
-										<div class="card text-white box mt-0" id="media-over-left">
-											<div class="card-body text-center">
-												<div class="wmh-ans"><?php echo esc_html($unused_media_count); ?></div>
-												<div class="wmh-title"><?php _e('Media Left Over', MEDIA_HYGIENE); ?></div>
-											</div>
-										</div>
-									</div>
-									<div class="col-xl-4 col-sm-6">
-										<div class="card text-white box" id="total-media-size">
-											<div class="card-body text-center">
-												<div class="wmh-ans"><?php echo esc_html($media_size); ?></div>
-												<div class="wmh-title"><?php _e('Total Media Space', MEDIA_HYGIENE); ?></div>
-											</div>
-										</div>
-									</div>
-									<div class="col-xl-4 col-sm-6">
-										<div class="card text-white box" id="media-in-use-size">
-											<div class="card-body text-center">
-												<div class="wmh-ans"><?php echo esc_html($use_media_size); ?></div>
-												<div class="wmh-title"><?php _e('In Use Media Space', MEDIA_HYGIENE); ?></div>
-											</div>
-										</div>
-									</div>
-									<div class="col-xl-4 col-sm-6">
-										<div class="card text-white box" id="media-over-left-size">
-											<div class="card-body text-center">
-												<div class="wmh-ans"><?php echo esc_html($unused_media_size); ?></div>
-												<div class="wmh-title"><?php _e('Media Left Over Space', MEDIA_HYGIENE); ?></div>
-											</div>
-										</div>
-									</div>
-								</div>
-							</div>
-						</div>
-					</div>
-				</div>
+<div class="wmh-db-wrap" id="wmh-statistics" style="margin-top:12px;">
 
-				<!--  Media left over -->
-				<div id="media-break-down-accordion" class="admin-accord">
-					<div class="card mt-2">
-						<div class="card-header pt-1 pb-1" id="media-break-down">
-							<h5 class="mb-0">
-								<button class="btn btn-link w-100 text-start media-break" data-bs-toggle="collapse" data-bs-target="#media-break-down-content" aria-expanded="true" aria-controls="media-break-down-content">
-									<?php _e('Media Left over', MEDIA_HYGIENE); ?>
-								</button>
-							</h5>
-						</div>
-						<div id="media-break-down-content" class="collapse show" aria-labelledby="media-reak-down" data-parent="#media-break-down-accordion">
-							<div class="card-body p-0 pb-3">
-								<div class="row row-main">
+	<!-- Stats Strip -->
+	<div class="wmh-stats-strip">
 
-									<?php if (isset($media_breakdown_data) && !empty($media_breakdown_data)) foreach ($media_breakdown_data as $value) { {
-
-
-											if (isset($value['cat_count']) && $value['cat_count'] != '') {
-												$cat_count = $value['cat_count'];
-											}
-
-											if (isset($value['attachment_cat']) && $value['attachment_cat'] != '') {
-												$attachment_cat = ucfirst($value['attachment_cat']);
-											}
-
-											if (isset($value['cat_per']) && $value['cat_per'] != '') {
-												$cat_per = $value['cat_per'] . ' %';
-											}
-
-
-									?>
-											<div class="col-xl-4 col-sm-6 pt-3">
-												<div class="card text-white box mt-0" id="image">
-													<div class="card-body text-center">
-														<div class="type-count"><?php echo esc_html($cat_count); ?></div>
-														<div class="wmh-media-percentage">
-															<div class="type-name"><?php echo esc_html($attachment_cat); ?></div>
-															<div class="type-percetage"><?php echo esc_html($cat_per); ?></div>
-														</div>
-													</div>
-												</div>
-											</div>
-										<?php }
-									}
-									else { ?>
-										<div class="col-xl-4 col-sm-6 pt-3">
-											<div class="card text-white box mt-0" id="image">
-												<div class="card-body text-center">
-													<div class="type-count"><?php echo esc_html('0'); ?></div>
-													<div class="wmh-media-percentage">
-														<div class="type-name"><?php _e('Images', MEDIA_HYGIENE); ?></div>
-														<div class="type-percetage"><?php echo esc_html('0 %'); ?></div>
-													</div>
-												</div>
-											</div>
-										</div>
-										<div class="col-xl-4 col-sm-6 pt-3">
-											<div class="card text-white box mt-0" id="documents">
-												<div class="card-body text-center">
-													<div class="type-count"><?php echo esc_html('0'); ?></div>
-													<div class="wmh-media-percentage">
-														<div class="type-name"><?php _e('Documents', MEDIA_HYGIENE); ?></div>
-														<div class="type-percetage"><?php echo esc_html('0 %'); ?></div>
-													</div>
-												</div>
-											</div>
-										</div>
-										<div class="col-xl-4 col-sm-6 pt-3">
-											<div class="card text-white box mt-0" id="videos">
-												<div class="card-body text-center">
-													<div class="type-count"><?php echo esc_html('0'); ?></div>
-													<div class="wmh-media-percentage">
-														<div class="type-name"><?php _e('Video', MEDIA_HYGIENE); ?></div>
-														<div class="type-percetage"><?php echo esc_html('0 %'); ?></div>
-													</div>
-												</div>
-											</div>
-										</div>
-										<div class="col-xl-4 col-sm-6 pt-3">
-											<div class="card text-white box mt-0" id="audios">
-												<div class="card-body text-center">
-													<div class="type-count"><?php echo esc_html('0'); ?></div>
-													<div class="wmh-media-percentage">
-														<div class="type-name"><?php _e('Audio', MEDIA_HYGIENE); ?></div>
-														<div class="type-percetage"><?php echo esc_html('0 %'); ?></div>
-													</div>
-												</div>
-											</div>
-										</div>
-										<div class="col-xl-4 col-sm-6 pt-3">
-											<div class="card text-white box mt-0" id="other">
-												<div class="card-body text-center">
-													<div class="type-count"><?php echo esc_html('0'); ?></div>
-													<div class="wmh-media-percentage">
-														<div class="type-name"><?php _e('Other', MEDIA_HYGIENE); ?></div>
-														<div class="type-percetage"><?php echo esc_html('0 %'); ?></div>
-													</div>
-												</div>
-											</div>
-										</div>
-									<?php } ?>
-								</div>
-							</div>
-						</div>
-					</div>
-				</div>
-
-			</div>
+		<div class="wmh-st-tile wmh-st-total" id="total-media">
+			<i class="fa-solid fa-photo-film wmh-st-icon"></i>
+			<div class="wmh-st-num"><?php echo esc_html( $media_count ); ?></div>
+			<div class="wmh-st-lbl"><?php _e( 'Total Media', MEDIA_HYGIENE ); ?></div>
 		</div>
 
-		<div class="col-md-12 px-0">
-			<div class="wmh-dashboard mb-2">
-				<!-- Media left over breakdown -->
-				<div id="media-type-accordion" class="admin-accord">
-					<div class="card mt-2">
-						<div class="card-header pt-1 pb-1" id="media-type">
-							<h5 class="mb-0">
-								<button class="btn btn-link w-100 text-start collapsed" data-bs-toggle="collapse" data-bs-target="#media-type-content" aria-expanded="false" aria-controls="media-type-accordion-content">
-									<?php _e('Media Left Over Breakdown', MEDIA_HYGIENE); ?>
-								</button>
-							</h5>
-						</div>
-						<div id="media-type-content" class="collapse" aria-expanded="true" aria-labelledby="summary" data-parent="#media-type-accordion">
-							<div class="card-body p-0 pb-3">
-								<div class="row row-main media-type-info">
-
-									<?php
-									if (isset($media_type_info) && !empty($media_type_info)) {
-										foreach ($media_type_info as $info) {
-											if (isset($info['ext']) && $info['ext'] != '') {
-												$media_type_name = $info['ext'];
-											} else {
-												$media_type_name = '-';
-											}
-											if (isset($info['ext_count']) && $info['ext_count'] != '') {
-												$media_type_count = $info['ext_count'];
-											} else {
-												$media_type_count = '-';
-											}
-											if (isset($info['ext_per']) && $info['ext_per'] != '') {
-												$media_type_per = $info['ext_per'];
-											} else {
-												$media_type_per = '-';
-											}
-											if (isset($info['file_size']) && $info['file_size'] != '') {
-												$media_type_size = $info['file_size'];
-											} else {
-												$media_type_size = '-';
-											}
-
-									?>
-											<div class="col-xl-2 col-sm-6 pt-3">
-												<div class="card text-white box mt-0">
-													<div class="card-body text-center media-type-body">
-														<div class="wmh-media-type-text">
-															<p><?php echo esc_html($media_type_count); ?></p>
-														</div>
-														<div class="wmh-media-type-info">
-															<p><?php echo ($media_type_size); ?></p>
-															<span><?php echo esc_html($media_type_per); ?> %</span>
-														</div>
-														<div class="wmh-media-type-extantion">
-															<p><?php echo esc_html($media_type_name); ?></p>
-														</div>
-													</div>
-												</div>
-											</div>
-										<?php }
-									} else { ?>
-										<div>
-											<p><?php _e('No Data', MEDIA_HYGIENE); ?></p>
-										</div>
-									<?php } ?>
-
-								</div>
-							</div>
-						</div>
-					</div>
-				</div>
-			</div>
+		<div class="wmh-st-tile wmh-st-used" id="media-in-use">
+			<i class="fa-solid fa-link wmh-st-icon"></i>
+			<div class="wmh-st-num"><?php echo esc_html( $use_media_count ); ?></div>
+			<div class="wmh-st-lbl"><?php _e( 'In Use', MEDIA_HYGIENE ); ?></div>
 		</div>
-	</div>
+
+		<div class="wmh-st-tile wmh-st-left" id="media-over-left">
+			<i class="fa-solid fa-circle-exclamation wmh-st-icon"></i>
+			<div class="wmh-st-num"><?php echo esc_html( $unused_media_count ); ?></div>
+			<div class="wmh-st-lbl"><?php _e( 'Left Over', MEDIA_HYGIENE ); ?></div>
+		</div>
+
+		<div class="wmh-st-divider"></div>
+
+		<div class="wmh-st-tile wmh-st-total" id="total-media-size">
+			<i class="fa-solid fa-database wmh-st-icon"></i>
+			<div class="wmh-st-num"><?php echo esc_html( $media_size ); ?></div>
+			<div class="wmh-st-lbl"><?php _e( 'Total Space', MEDIA_HYGIENE ); ?></div>
+		</div>
+
+		<div class="wmh-st-tile wmh-st-used" id="media-in-use-size">
+			<i class="fa-solid fa-hard-drive wmh-st-icon"></i>
+			<div class="wmh-st-num"><?php echo esc_html( $use_media_size ); ?></div>
+			<div class="wmh-st-lbl"><?php _e( 'In Use Space', MEDIA_HYGIENE ); ?></div>
+		</div>
+
+		<div class="wmh-st-tile wmh-st-left" id="media-over-left-size">
+			<i class="fa-solid fa-triangle-exclamation wmh-st-icon"></i>
+			<div class="wmh-st-num"><?php echo esc_html( $unused_media_size ); ?></div>
+			<div class="wmh-st-lbl"><?php _e( 'Left Over Space', MEDIA_HYGIENE ); ?></div>
+		</div>
+
+	</div><!-- .wmh-stats-strip -->
+
+	<!-- Lower two-column section -->
+	<div class="wmh-db-lower">
+
+		<!-- Left: Media Left Over (category breakdown) -->
+		<div class="wmh-db-panel">
+			<div class="wmh-db-panel-hd">
+				<i class="fa-solid fa-circle-exclamation"></i>
+				<?php _e( 'Media Left Over', MEDIA_HYGIENE ); ?>
+			</div>
+			<div class="wmh-lo-list">
+				<?php
+				$wmh_cat_icon_map = [
+					'images'    => 'fa-image',
+					'video'     => 'fa-video',
+					'audio'     => 'fa-music',
+					'documents' => 'fa-file-lines',
+					'others'    => 'fa-file',
+				];
+				if ( isset( $media_breakdown_data ) && ! empty( $media_breakdown_data ) ) {
+					foreach ( $media_breakdown_data as $value ) {
+						$cat_count      = isset( $value['cat_count'] ) && $value['cat_count'] != '' ? $value['cat_count'] : '0';
+						$attachment_cat = isset( $value['attachment_cat'] ) && $value['attachment_cat'] != '' ? ucfirst( $value['attachment_cat'] ) : '-';
+						$cat_per_num    = isset( $value['cat_per'] ) ? floatval( $value['cat_per'] ) : 0;
+						$cat_per        = number_format( $cat_per_num, 2 ) . '%';
+						$cat_slug       = strtolower( $value['attachment_cat'] ?? '' );
+						$cat_icon       = $wmh_cat_icon_map[ $cat_slug ] ?? 'fa-file';
+						?>
+						<div class="wmh-lo-row">
+							<i class="fa-solid <?php echo esc_attr( $cat_icon ); ?> wmh-lo-icon"></i>
+							<span class="wmh-lo-cat"><?php echo esc_html( $attachment_cat ); ?></span>
+							<span class="wmh-lo-cnt"><?php echo esc_html( $cat_count ); ?></span>
+							<div class="wmh-lo-bar"><div class="wmh-lo-fill" style="width:<?php echo esc_attr( min( 100, $cat_per_num ) ); ?>%"></div></div>
+							<span class="wmh-lo-pct"><?php echo esc_html( $cat_per ); ?></span>
+						</div>
+						<?php
+					}
+				} else {
+					$wmh_defaults = [
+						[ 'label' => 'Images',    'icon' => 'fa-image' ],
+						[ 'label' => 'Documents', 'icon' => 'fa-file-lines' ],
+						[ 'label' => 'Video',     'icon' => 'fa-video' ],
+						[ 'label' => 'Audio',     'icon' => 'fa-music' ],
+						[ 'label' => 'Other',     'icon' => 'fa-file' ],
+					];
+					foreach ( $wmh_defaults as $d ) {
+						?>
+						<div class="wmh-lo-row wmh-lo-empty">
+							<i class="fa-solid <?php echo esc_attr( $d['icon'] ); ?> wmh-lo-icon"></i>
+							<span class="wmh-lo-cat"><?php echo esc_html( $d['label'] ); ?></span>
+							<span class="wmh-lo-cnt">—</span>
+							<div class="wmh-lo-bar"><div class="wmh-lo-fill" style="width:0%"></div></div>
+							<span class="wmh-lo-pct">—</span>
+						</div>
+						<?php
+					}
+				}
+				?>
+			</div>
+		</div><!-- .wmh-db-panel (left) -->
+
+		<!-- Right: Left Over Breakdown (by extension) -->
+		<div class="wmh-db-panel">
+			<div class="wmh-db-panel-hd">
+				<i class="fa-solid fa-layer-group"></i>
+				<?php _e( 'Left Over Breakdown', MEDIA_HYGIENE ); ?>
+			</div>
+			<div class="wmh-lo-list wmh-bd-list">
+				<?php
+				if ( isset( $media_type_info ) && ! empty( $media_type_info ) ) {
+					foreach ( $media_type_info as $info ) {
+						$media_type_name  = isset( $info['ext'] )        && $info['ext']        != '' ? $info['ext']        : '-';
+						$media_type_count = isset( $info['ext_count'] )  && $info['ext_count']  != '' ? $info['ext_count']  : '-';
+						$media_type_per   = isset( $info['ext_per'] )    && $info['ext_per']    != '' ? floatval( $info['ext_per'] ) : 0;
+						$media_type_size  = isset( $info['file_size'] )  && $info['file_size']  != '' ? $info['file_size']  : '-';
+						$media_type_per_display = number_format( $media_type_per, 2 ) . '%';
+
+						$ext = strtolower( $media_type_name );
+						if ( in_array( $ext, [ 'jpg','jpeg','png','gif','webp','svg','bmp','ico','tiff','avif' ] ) ) {
+							$bd_icon = 'fa-image';
+						} elseif ( in_array( $ext, [ 'mp4','avi','mov','wmv','mkv','flv','webm' ] ) ) {
+							$bd_icon = 'fa-video';
+						} elseif ( in_array( $ext, [ 'mp3','wav','ogg','aac','flac','m4a' ] ) ) {
+							$bd_icon = 'fa-music';
+						} elseif ( $ext === 'pdf' ) {
+							$bd_icon = 'fa-file-pdf';
+						} elseif ( in_array( $ext, [ 'doc','docx' ] ) ) {
+							$bd_icon = 'fa-file-word';
+						} elseif ( in_array( $ext, [ 'xls','xlsx','csv' ] ) ) {
+							$bd_icon = 'fa-file-excel';
+						} elseif ( in_array( $ext, [ 'zip','rar','7z','tar','gz' ] ) ) {
+							$bd_icon = 'fa-file-zipper';
+						} else {
+							$bd_icon = 'fa-file';
+						}
+						?>
+						<div class="wmh-lo-row">
+							<i class="fa-solid <?php echo esc_attr( $bd_icon ); ?> wmh-lo-icon"></i>
+							<span class="wmh-lo-cat wmh-bd-ext"><?php echo esc_html( strtoupper( $media_type_name ) ); ?></span>
+							<span class="wmh-lo-cnt"><?php echo esc_html( $media_type_count ); ?></span>
+							<div class="wmh-lo-bar"><div class="wmh-lo-fill" style="width:<?php echo esc_attr( min( 100, $media_type_per ) ); ?>%"></div></div>
+							<span class="wmh-bd-size"><?php echo esc_html( $media_type_size ); ?></span>
+							<span class="wmh-lo-pct"><?php echo esc_html( $media_type_per_display ); ?></span>
+						</div>
+						<?php
+					}
+				} else { ?>
+					<p class="wmh-bd-empty"><?php _e( 'No data available. Run a scan to see the breakdown.', MEDIA_HYGIENE ); ?></p>
+				<?php } ?>
+			</div>
+		</div><!-- .wmh-db-panel (right) -->
+
+	</div><!-- .wmh-db-lower -->
+
+</div><!-- .wmh-db-wrap -->

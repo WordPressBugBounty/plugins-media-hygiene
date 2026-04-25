@@ -16,6 +16,7 @@ class wmh_media_hygiene_view extends WP_List_Table
     public $wmh_temp;
     public $wp_upload_dir;
     public $basedir;
+    public $wmh_filtered_blacklist_count = null;
 
     public function fn_wmh_first_load()
     {
@@ -58,13 +59,13 @@ class wmh_media_hygiene_view extends WP_List_Table
                 /* get pagination. */
                 if (is_array($data) && !empty($data)) {
                     if ($type === 'blacklist') {
-                        $table_exists_prepare = $this->conn->get_var("SHOW TABLES LIKE '$this->wmh_unused_media_post_id'") == $this->wmh_unused_media_post_id;
+                        $table_exists_prepare = $this->conn->get_var( $this->conn->prepare( "SHOW TABLES LIKE %s", $this->wmh_unused_media_post_id ) ) == $this->wmh_unused_media_post_id;
                         if ($table_exists_prepare) {
                             $total_media_result = $this->conn->get_row('SELECT count(post_id) as total_media FROM ' . $this->wmh_unused_media_post_id . '');
                             $total_media_result = $total_media_result->total_media;
                         }
                     } elseif ($type === 'whitelist') {
-                        $table_exists_prepare_2 = $this->conn->get_var("SHOW TABLES LIKE '$this->wmh_whitelist_media_post_id'") == $this->wmh_whitelist_media_post_id;
+                        $table_exists_prepare_2 = $this->conn->get_var( $this->conn->prepare( "SHOW TABLES LIKE %s", $this->wmh_whitelist_media_post_id ) ) == $this->wmh_whitelist_media_post_id;
                         if ($table_exists_prepare_2) {
                             $total_media_result = $this->conn->get_row('SELECT count(post_id) as total_media FROM ' . $this->wmh_whitelist_media_post_id . '');
                             $total_media_result = $total_media_result->total_media;
@@ -86,6 +87,12 @@ class wmh_media_hygiene_view extends WP_List_Table
             if (isset($data['count'])) {
                 $total_media_result = $data['count'];
                 unset($data['count']);
+            }
+
+            /* store filtered count so get_views() can display it in the tab header */
+            $has_filter = (isset($_GET['attachment_cat']) && $_GET['attachment_cat'] !== '') || (isset($_GET['date']) && $_GET['date'] !== '');
+            if ($has_filter && $type === 'blacklist') {
+                $this->wmh_filtered_blacklist_count = (int) $total_media_result;
             }
 
             $total_items = $total_media_result;
@@ -119,17 +126,24 @@ class wmh_media_hygiene_view extends WP_List_Table
         $posts_data = array();
         $count = 0;
 
-        $sql_count = "SELECT COUNT(ID) FROM {$this->wp_posts} WHERE post_type = 'attachment' AND post_status = 'trash'";
         if ($search_term) {
-            $sql_count .= " AND (ID LIKE '%$search_term%' OR post_title LIKE '%$search_term%' OR post_mime_type LIKE '%$search_term%' OR guid LIKE '%$search_term%')";
+            $like = '%' . $this->conn->esc_like($search_term) . '%';
+            $sql_count = $this->conn->prepare(
+                "SELECT COUNT(ID) FROM {$this->wp_posts} WHERE post_type = 'attachment' AND post_status = 'trash' AND (ID LIKE %s OR post_title LIKE %s OR post_mime_type LIKE %s OR guid LIKE %s)",
+                $like, $like, $like, $like
+            );
+            $sql = $this->conn->prepare(
+                "SELECT ID, post_title, post_date, post_mime_type FROM {$this->wp_posts} WHERE post_type = 'attachment' AND post_status = 'trash' AND (ID LIKE %s OR post_title LIKE %s OR post_mime_type LIKE %s OR guid LIKE %s) LIMIT %d OFFSET %d",
+                $like, $like, $like, $like, (int) $limit, (int) $offset
+            );
+        } else {
+            $sql_count = "SELECT COUNT(ID) FROM {$this->wp_posts} WHERE post_type = 'attachment' AND post_status = 'trash'";
+            $sql = $this->conn->prepare(
+                "SELECT ID, post_title, post_date, post_mime_type FROM {$this->wp_posts} WHERE post_type = 'attachment' AND post_status = 'trash' LIMIT %d OFFSET %d",
+                (int) $limit, (int) $offset
+            );
         }
         $count = $this->conn->get_var($sql_count);
-
-        $sql = "SELECT ID, post_title, post_date, post_mime_type FROM {$this->wp_posts} WHERE post_type = 'attachment' AND post_status = 'trash'";
-        if ($search_term) {
-            $sql .= " AND (ID LIKE '%$search_term%' OR post_title LIKE '%$search_term%' OR post_mime_type LIKE '%$search_term%' OR guid LIKE '%$search_term%')";
-        }
-        $sql .= " LIMIT $limit OFFSET $offset";
 
 
         $posts_data = $this->conn->get_results($sql, ARRAY_A);
@@ -272,7 +286,10 @@ class wmh_media_hygiene_view extends WP_List_Table
             $styles[$type] = ($current_type === $type) ? 'style="color:green;font-weight:600"' : '';
         }
 
-        $blacklist_count = $this->fn_wmh_count_blacklist_media();
+        $has_filter = (isset($_GET['attachment_cat']) && $_GET['attachment_cat'] !== '') || (isset($_GET['date']) && $_GET['date'] !== '');
+        $blacklist_count = ($has_filter && $current_type === 'blacklist' && $this->wmh_filtered_blacklist_count !== null)
+            ? $this->wmh_filtered_blacklist_count
+            : $this->fn_wmh_count_blacklist_media();
         $whitelist_count = $this->fn_wmh_count_whitelist_media();
         $trash_count =  wp_count_posts('attachment')->trash;
 
@@ -505,18 +522,21 @@ class wmh_media_hygiene_view extends WP_List_Table
             $this->conn->query('INSERT INTO ' . $this->wmh_unused_media_post_id . ' SELECT * FROM ' . $this->wmh_temp . ' ');
         }
 
-        if ((isset($_GET['type'])  && sanitize_text_field($_GET['type']) == 'blacklist') || (!isset($_GET['type']))) {
-            $sql = 'SELECT post_id, size FROM ' . $this->wmh_unused_media_post_id . ' ';
-            $sql1 = "SELECT p.ID, p.post_title, p.post_date, p.post_mime_type, u.size FROM " . $this->wp_posts . " AS p INNER JOIN " . $this->wmh_unused_media_post_id . " AS u ON p.ID = u.post_id   WHERE p.post_type = 'attachment' AND ( p.ID LIKE '%$search_term%' OR p.post_title LIKE '%$search_term%' OR p.post_mime_type LIKE '%$search_term%' OR p.guid LIKE '%$search_term%' ) ";
+        $is_blacklist = ( isset($_GET['type']) && sanitize_text_field($_GET['type']) == 'blacklist' ) || ( !isset($_GET['type']) );
+        $join_table   = $is_blacklist ? $this->wmh_unused_media_post_id : $this->wmh_whitelist_media_post_id;
+        $sql          = 'SELECT post_id, size FROM ' . $join_table . ' ';
+        if ($search_term) {
+            $like = '%' . $this->conn->esc_like($search_term) . '%';
+            $sql1 = $this->conn->prepare(
+                "SELECT p.ID, p.post_title, p.post_date, p.post_mime_type, u.size FROM {$this->wp_posts} AS p INNER JOIN {$join_table} AS u ON p.ID = u.post_id WHERE p.post_type = 'attachment' AND (p.ID LIKE %s OR p.post_title LIKE %s OR p.post_mime_type LIKE %s OR p.guid LIKE %s)",
+                $like, $like, $like, $like
+            );
         } else {
-            $sql = 'SELECT post_id, size FROM ' . $this->wmh_whitelist_media_post_id . ' ';
-            $sql1 = "SELECT p.ID, p.post_title, p.post_date, p.post_mime_type, u.size FROM " . $this->wp_posts . " AS p INNER JOIN " . $this->wmh_whitelist_media_post_id . " AS u ON p.ID = u.post_id   WHERE p.post_type = 'attachment' AND ( p.ID LIKE '%$search_term%' OR p.post_title LIKE '%$search_term%' OR p.post_mime_type LIKE '%$search_term%' OR p.guid LIKE '%$search_term%' ) ";
+            $sql1 = '';
+            $sql .= $this->conn->prepare( 'LIMIT %d OFFSET %d', (int) $limit, (int) $offset );
         }
-        if (!$search_term) {
-            $sql .= 'LIMIT ' . $limit . ' OFFSET ' . $offset . '';
-        }
-        $table_exists = $this->conn->get_var("SHOW TABLES LIKE '$this->wmh_unused_media_post_id'") == $this->wmh_unused_media_post_id;
-        $table_exists2 = $this->conn->get_var("SHOW TABLES LIKE '$this->wmh_whitelist_media_post_id'") == $this->wmh_whitelist_media_post_id;
+        $table_exists  = $this->conn->get_var( $this->conn->prepare( "SHOW TABLES LIKE %s", $this->wmh_unused_media_post_id ) ) == $this->wmh_unused_media_post_id;
+        $table_exists2 = $this->conn->get_var( $this->conn->prepare( "SHOW TABLES LIKE %s", $this->wmh_whitelist_media_post_id ) ) == $this->wmh_whitelist_media_post_id;
         if ($table_exists && $table_exists2) {
             $result = $this->conn->get_results($sql, ARRAY_A);
         }
@@ -542,7 +562,7 @@ class wmh_media_hygiene_view extends WP_List_Table
                     if ($r['post_id']) {
                         $p_id = $r['post_id'];
                         $p_size = $r['size'];
-                        $sql1 = " SELECT post_title, post_date, post_mime_type from " . $this->wp_posts . " WHERE post_type = 'attachment' AND ID = '" . $p_id . "' ";
+                        $sql1 = $this->conn->prepare( "SELECT post_title, post_date, post_mime_type FROM {$this->wp_posts} WHERE post_type = 'attachment' AND ID = %d", (int) $p_id );
                         $posts_data = $this->conn->get_row($sql1, ARRAY_A);
                         if (!empty($posts_data)) {
                             $p_title = $posts_data['post_title'];
@@ -604,151 +624,84 @@ class wmh_media_hygiene_view extends WP_List_Table
 
     public function fn_wmh_filter_data($limit, $offset)
     {
-        $table_data = array();
-        $posts_data = array();
-        $attachment_cat = '';
-        $date = '';
-        $count = 0;
+        $table_data = [];
 
-        if (isset($_GET['attachment_cat'])) {
-            $attachment_cat = sanitize_text_field($_GET['attachment_cat']);
-        }
-        if (isset($_GET['date'])) {
-            $date = sanitize_text_field($_GET['date']);
-        }
+        $attachment_cat = isset($_GET['attachment_cat']) ? sanitize_text_field($_GET['attachment_cat']) : '';
+        $date           = isset($_GET['date'])           ? sanitize_text_field($_GET['date'])           : '';
+        $type           = isset($_GET['type'])           ? sanitize_text_field($_GET['type'])           : 'blacklist';
 
-        /* filter data here by blacklist, whitelist, or trash. */
-        $type = isset($_GET['type']) ? sanitize_text_field($_GET['type']) : 'blacklist';
+        $is_join   = in_array($type, ['blacklist', 'whitelist'], true);
+        $mime_col  = $is_join ? 'p.post_mime_type' : 'post_mime_type';
+        $date_col  = $is_join ? 'p.post_date'      : 'post_date';
 
-        if ($type === 'blacklist') {
-            $sql1 = "SELECT p.ID, p.post_title, p.post_date, p.post_mime_type, u.size FROM " . $this->wp_posts . " AS p INNER JOIN " . $this->wmh_unused_media_post_id . " AS u ON p.ID = u.post_id";
-        } elseif ($type === 'whitelist') {
-            $sql1 = "SELECT p.ID, p.post_title, p.post_date, p.post_mime_type, u.size FROM " . $this->wp_posts . " AS p INNER JOIN " . $this->wmh_whitelist_media_post_id . " AS u ON p.ID = u.post_id";
-        } elseif ($type === 'trash') {
-            $sql1 = "SELECT ID, post_title, post_date, post_mime_type FROM " . $this->wp_posts . "";
-        }
+        /* build extra WHERE conditions and their values for prepare() */
+        $where_parts  = [];
+        $where_values = [];
 
-        if ($attachment_cat == 'images') {
-            if ($date) {
-                if ($type == 'trash') {
-                    $sql1 .= " WHERE post_status = 'trash' AND post_type = 'attachment' AND post_mime_type LIKE '%image%' AND post_date LIKE '%" . $date . "%'";
-                } else {
-                    $sql1 .= " WHERE p.post_type = 'attachment' AND p.post_mime_type LIKE '%image%' AND post_date LIKE '%" . $date . "%'";
-                }
-            } else {
-                if ($type == 'trash') {
-                    $sql1 .= " WHERE post_status = 'trash' AND post_type = 'attachment' AND post_mime_type LIKE '%image%'";
-                } else {
-                    $sql1 .= " WHERE p.post_type = 'attachment' AND p.post_mime_type LIKE '%image%'";
-                }
+        if ($attachment_cat === 'images') {
+            $where_parts[]  = "{$mime_col} LIKE %s";
+            $where_values[] = '%image%';
+        } elseif ($attachment_cat === 'documents') {
+            $where_parts[]  = "{$mime_col} LIKE %s";
+            $where_values[] = '%application%';
+        } elseif ($attachment_cat === 'audio') {
+            $where_parts[]  = "{$mime_col} LIKE %s";
+            $where_values[] = '%audio%';
+        } elseif ($attachment_cat === 'video') {
+            $where_parts[]  = "{$mime_col} LIKE %s";
+            $where_values[] = '%video%';
+        } elseif ($attachment_cat === 'others') {
+            foreach (['%image%', '%application%', '%audio%', '%video%'] as $not_mime) {
+                $where_parts[]  = "{$mime_col} NOT LIKE %s";
+                $where_values[] = $not_mime;
             }
         }
+        /* 'all' / '' — no mime filter */
 
-        if ($attachment_cat == 'documents') {
-            if ($date) {
-                if ($type == 'trash') {
-                    $sql1 .= " WHERE post_status = 'trash' AND post_type = 'attachment' AND post_mime_type LIKE '%application%' AND post_date LIKE '%" . $date . "%'";
-                } else {
-                    $sql1 .= " WHERE p.post_type = 'attachment' AND p.post_mime_type LIKE '%application%' AND post_date LIKE '%" . $date . "%'";
-                }
-            } else {
-                if ($type == 'trash') {
-                    $sql1 .= " WHERE post_status = 'trash' AND post_type = 'attachment' AND post_mime_type LIKE '%application%'";
-                } else {
-                    $sql1 .= " WHERE p.post_type = 'attachment' AND p.post_mime_type LIKE '%application%'";
-                }
-            }
+        if ($date !== '') {
+            $where_parts[]  = "{$date_col} LIKE %s";
+            $where_values[] = '%' . $this->conn->esc_like($date) . '%';
         }
 
-        if ($attachment_cat == 'audio') {
-            if ($date) {
-                if ($type == 'trash') {
-                    $sql1 .= " WHERE post_status = 'trash' AND post_type = 'attachment' AND post_mime_type LIKE '%audio%' AND post_date LIKE '%" . $date . "%'";
-                } else {
-                    $sql1 .= " WHERE p.post_type = 'attachment' AND p.post_mime_type LIKE '%audio%' AND post_date LIKE '%" . $date . "%'";
-                }
-            } else {
-                if ($type == 'trash') {
-                    $sql1 .= " WHERE post_status = 'trash' AND post_type = 'attachment' AND post_mime_type LIKE '%audio%'";
-                } else {
-                    $sql1 .= " WHERE p.post_type = 'attachment' AND p.post_mime_type LIKE '%audio%'";
-                }
-            }
+        $extra_where = !empty($where_parts) ? ' AND ' . implode(' AND ', $where_parts) : '';
+
+        if ($is_join) {
+            $join_table = ($type === 'whitelist') ? $this->wmh_whitelist_media_post_id : $this->wmh_unused_media_post_id;
+            $base_from  = "FROM {$this->wp_posts} AS p
+                           INNER JOIN {$join_table} AS u ON p.ID = u.post_id
+                           WHERE p.post_type = 'attachment'" . $extra_where;
+            $count_sql  = "SELECT COUNT(*) " . $base_from;
+            $data_sql   = "SELECT p.ID, p.post_title, p.post_date, p.post_mime_type, u.size " . $base_from;
+        } else {
+            $base_from = "FROM {$this->wp_posts}
+                          WHERE post_status = 'trash' AND post_type = 'attachment'" . $extra_where;
+            $count_sql = "SELECT COUNT(*) " . $base_from;
+            $data_sql  = "SELECT ID, post_title, post_date, post_mime_type " . $base_from;
         }
 
-        if ($attachment_cat == 'video') {
-            if ($date) {
-                if ($type == 'trash') {
-                    $sql1 .= " WHERE post_status = 'trash' AND post_type = 'attachment' AND post_mime_type LIKE '%video%' AND post_date LIKE '%" . $date . "%'";
-                } else {
-                    $sql1 .= " WHERE p.post_type = 'attachment' AND p.post_mime_type LIKE '%video%' AND post_date LIKE '%" . $date . "%'";
-                }
-            } else {
-                if ($type == 'trash') {
-                    $sql1 .= " WHERE post_status = 'trash' AND post_type = 'attachment' AND post_mime_type LIKE '%video%'";
-                } else {
-                    $sql1 .= " WHERE p.post_type = 'attachment' AND p.post_mime_type LIKE '%video%'";
-                }
-            }
+        if (!empty($where_values)) {
+            $count_prepared = $this->conn->prepare($count_sql, ...$where_values);
+            $data_prepared  = $this->conn->prepare($data_sql . ' LIMIT %d OFFSET %d', ...array_merge($where_values, [(int) $limit, (int) $offset]));
+        } else {
+            $count_prepared = $count_sql;
+            $data_prepared  = $this->conn->prepare($data_sql . ' LIMIT %d OFFSET %d', (int) $limit, (int) $offset);
         }
 
-        if ($attachment_cat == 'others') {
-            if ($date) {
-                if ($type == 'trash') {
-                    $sql1 .= " WHERE post_status = 'trash' AND post_type = 'attachment' AND post_mime_type NOT LIKE '%image%' AND post_mime_type NOT LIKE '%application%' AND post_mime_type NOT LIKE '%audio%' AND post_mime_type NOT LIKE '%video%' AND post_date LIKE '%" . $date . "%'";
-                } else {
-                    $sql1 .= " WHERE p.post_type = 'attachment' AND p.post_mime_type NOT LIKE '%image%' AND post_mime_type NOT LIKE '%application%' AND post_mime_type NOT LIKE '%audio%' AND post_mime_type NOT LIKE '%video%' AND post_date LIKE '%" . $date . "%'";
-                }
-            } else {
-                if ($type == 'trash') {
-                    $sql1 .= " WHERE post_status = 'trash' AND post_type = 'attachment' AND post_mime_type NOT LIKE '%image%' AND post_mime_type NOT LIKE '%application%' AND post_mime_type NOT LIKE '%audio%' AND post_mime_type NOT LIKE '%video%'";
-                } else {
-                    $sql1 .= " WHERE p.post_type = 'attachment' AND p.post_mime_type NOT LIKE '%image%' AND post_mime_type NOT LIKE '%application%' AND post_mime_type NOT LIKE '%audio%' AND post_mime_type NOT LIKE '%video%'";
-                }
-            }
+        $count      = (int) $this->conn->get_var($count_prepared);
+        $posts_data = $this->conn->get_results($data_prepared, ARRAY_A);
+
+        foreach ($posts_data as $post) {
+            $p_size = $is_join ? $post['size'] : '-';
+            $table_data[] = $this->fn_wmh_display_data(
+                $post['ID'],
+                $post['post_title'],
+                $post['post_date'],
+                $post['post_mime_type'],
+                $p_size
+            );
         }
 
-        if ($attachment_cat == 'all' || $attachment_cat == '') {
-            if ($date) {
-                if ($type == 'trash') {
-                    $sql1 .= " WHERE post_status = 'trash' AND post_type = 'attachment' AND post_date LIKE '%" . $date . "%'";
-                } else {
-                    $sql1 .= " WHERE p.post_type = 'attachment' AND post_date LIKE '%" . $date . "%'";
-                }
-            } else {
-                if ($type == 'trash') {
-                    $sql1 .= " WHERE post_status = 'trash' AND post_type = 'attachment'";
-                } else {
-                    $sql1 .= " WHERE p.post_type = 'attachment'";
-                }
-            }
-        }
-
-        $posts_data_count = $this->conn->get_results($sql1, ARRAY_A);
-        $count = count($posts_data_count);
-
-        $sql1 .= 'LIMIT ' . $limit . ' OFFSET ' . $offset . '';
-        $posts_data = $this->conn->get_results($sql1, ARRAY_A);
-
-
-        if (!empty($posts_data)) {
-            foreach ($posts_data as $post) {
-                $p_id = $post['ID'];
-                $p_title = $post['post_title'];
-                $p_date = $post['post_date'];
-                $post_mime_type = $post['post_mime_type'];
-                if ($type == 'trash') {
-                    $p_size = '-';
-                } else {
-                    $p_size = $post['size'];
-                }
-                $table_data[] = $this->fn_wmh_display_data($p_id, $p_title, $p_date, $post_mime_type, $p_size);
-            }
-        }
-
-        if (isset($count) && $count != '' && $count != 0) {
-            $table_data['count'] = $count;
-        }
+        $table_data['count'] = $count;
 
         return $table_data;
     }
@@ -756,16 +709,21 @@ class wmh_media_hygiene_view extends WP_List_Table
 
     public function fn_wmh_count_blacklist_media()
     {
-
         $count = 0;
-        $count = get_option('wmh_total_unused_media_count');
+        $table_exists = $this->conn->get_var( $this->conn->prepare( "SHOW TABLES LIKE %s", $this->wmh_unused_media_post_id ) ) == $this->wmh_unused_media_post_id;
+        if ($table_exists) {
+            $row = $this->conn->get_row('SELECT COUNT(post_id) as cnt FROM ' . $this->wmh_unused_media_post_id);
+            if ($row) {
+                $count = (int) $row->cnt;
+            }
+        }
         return $count;
     }
 
     public function fn_wmh_count_whitelist_media()
     {
         $count = 0;
-        $table_exists = $this->conn->get_var("SHOW TABLES LIKE '$this->wmh_whitelist_media_post_id'") == $this->wmh_whitelist_media_post_id;
+        $table_exists = $this->conn->get_var( $this->conn->prepare( "SHOW TABLES LIKE %s", $this->wmh_whitelist_media_post_id ) ) == $this->wmh_whitelist_media_post_id;
         if ($table_exists) {
             $sql = 'SELECT count(id) as count FROM ' . $this->wmh_whitelist_media_post_id . '';
             $data = $this->conn->get_row($sql, ARRAY_A);

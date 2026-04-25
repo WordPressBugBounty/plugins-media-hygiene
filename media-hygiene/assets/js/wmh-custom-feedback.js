@@ -97,6 +97,7 @@ function doDeactiveProcess(processType = '') {
             checked_val: chekedVal,
             feedback_text: feedbackText,
             process_type: processType,
+            share_contact: jQuery('#wmh-share-contact').is(':checked') ? '1' : '0',
             nonce: wmhFeedbackObj.nonce
         },
         beforeSend: function () {

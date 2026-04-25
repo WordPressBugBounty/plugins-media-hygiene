@@ -36,6 +36,12 @@
         </li>
     </ul>
     <textarea rows="5" cols="90" id="wmh-text-deactivate" placeholder="Enter your feedback" style="display:none"></textarea>
+    <p style="margin-top:10px;">
+        <label>
+            <input type="checkbox" id="wmh-share-contact" value="1" />
+            <?php _e('Include my name, email address, and site URL in the feedback (optional)', MEDIA_HYGIENE); ?>
+        </label>
+    </p>
     <div class="wmh-deactive-loader-div" style="display: none;">
         <?php _e('Loading ...', MEDIA_HYGIENE); ?>
     </div>

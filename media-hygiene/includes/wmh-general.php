@@ -204,8 +204,8 @@ class wmh_general
 			'warning_2' => esc_html(__('Did you make a backup of your website?', MEDIA_HYGIENE)),
 			'warning_3' => esc_html(__('I agree that I want to trash all unused media files and that I have made a backup of the website.', MEDIA_HYGIENE)),
 			'msg_1' => esc_html(__('Copied', MEDIA_HYGIENE)),
-			'trash_page_confirm_1' => esc_html(__('Are you sure  you want to trash ALL the unused media on this page?', MEDIA_HYGIENE)),
-			'trash_page_confirm_2' => esc_html(__('I agree that I want to trash ALL the unused media files on this page and that I have made a backup of the website.', MEDIA_HYGIENE)),
+			'trash_page_confirm_1' => esc_html(__('Move ALL unused media on this page to Trash? Nothing will be permanently deleted yet — files go to the WordPress Media Trash first. You can review and restore anything before permanent removal.', MEDIA_HYGIENE)),
+			'trash_page_confirm_2' => esc_html(__('Please confirm: I have a backup of my website and I understand that these files will be moved to Trash (NOT permanently deleted). I can restore any file from the Media Library if needed.', MEDIA_HYGIENE)),
 			'restore_default_file_exe_msg_1' => esc_html(__('Are you sure want to restore default file extensions.', MEDIA_HYGIENE)),
 		);
 
@@ -373,8 +373,8 @@ class wmh_general
 		/* store scan button option data in wp_option. */
 		update_option('wmh_scan_option_data',  $wmh_scan_option_data, 'no');
 
-		/* anonymous analytics permission by default on */
-		update_option('wmh_send_data_to_server_permission', 'on');
+		/* anonymous analytics permission — pending opt-in, shown as a notice on first use */
+		update_option('wmh_send_data_to_server_permission', 'pending');
 
 		/* save scan status */
 		$count = $this->conn->get_row('SELECT COUNT(id) as unused_media FROM ' . $this->wmh_unused_media_post_id . '', ARRAY_A);

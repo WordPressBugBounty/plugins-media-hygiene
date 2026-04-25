@@ -3,6 +3,7 @@
 global $wpdb;
 $wmh_unused_media_post_id = $wpdb->prefix . MH_PREFIX . 'unused_media_post_id';
 $filter_data = '';
+$filter_date = '';
 if (isset($_GET['page'])) {
     /* attachment. */
     if (isset($_GET['attachment_cat'])) {
@@ -35,7 +36,7 @@ if (isset($_GET['page'])) {
 
 /* get and check there is unused media available or not. */
 $unused_media_data = array();
-$table_exists_view = $this->conn->get_var("SHOW TABLES LIKE '$wmh_unused_media_post_id'") == $wmh_unused_media_post_id;
+$table_exists_view = $wpdb->get_var( $wpdb->prepare( "SHOW TABLES LIKE %s", $wmh_unused_media_post_id ) ) == $wmh_unused_media_post_id;
 if ($table_exists_view) {
     $unused_media_sql = 'SELECT count(post_id) as count_post_id FROM ' . $wmh_unused_media_post_id . ' ';
     $unused_media_data = $wpdb->get_row($unused_media_sql, ARRAY_A);
@@ -134,11 +135,13 @@ $wmh_plugin_db_version_upgrade = get_option('wmh_plugin_db_version_upgrade');
                         <input type="hidden" name="progress_bar" id="progress_bar" value="0" />
                         <?php if (isset($wmh_plugin_db_version_upgrade) && $wmh_plugin_db_version_upgrade == '1') { ?>
                             <button type="submit" id="scan-button" class="button button-primary wmh-btn">
-                                <i class="fa-solid fa-spinner fa-spin scan-loader" style="display:none;"></i>&nbsp;<?php _e('Scan', MEDIA_HYGIENE); ?>
+                                <span class="wmh-btn-icon-slot"><i class="fa-solid fa-spinner fa-spin scan-loader" style="display:none;"></i><i class="fa-solid fa-magnifying-glass wmh-btn-static-icon"></i></span>
+                                <?php _e('Scan', MEDIA_HYGIENE); ?>
                             </button>
                         <?php } else { ?>
                             <button type="submit" class="button button-primary wmh-btn update-database-msg-btn">
-                                <i class="fa-solid fa-spinner fa-spin scan-loader" style="display:none;"></i>&nbsp;<?php _e('Scan', MEDIA_HYGIENE); ?>
+                                <span class="wmh-btn-icon-slot"><i class="fa-solid fa-spinner fa-spin scan-loader" style="display:none;"></i><i class="fa-solid fa-magnifying-glass wmh-btn-static-icon"></i></span>
+                                <?php _e('Scan', MEDIA_HYGIENE); ?>
                             </button>
                         <?php } ?>
                         <span class="tooltip-1"><i class="fa-solid fa-circle-question"></i>
@@ -159,12 +162,16 @@ $wmh_plugin_db_version_upgrade = get_option('wmh_plugin_db_version_upgrade');
                             <input type="hidden" name="action" value="create_page_unused_media_zip_action">
                             <input type="hidden" name="nonce" value="<?php echo esc_attr(wp_create_nonce('create_page_unused_media_zip_nonce')); ?>">
                             <input type="hidden" name="paged" value="<?php echo esc_attr($paged); ?>" />
+                            <input type="hidden" name="attachment_cat" value="<?php echo esc_attr($filter_data); ?>" />
+                            <input type="hidden" name="date" value="<?php echo esc_attr($filter_date); ?>" />
                             <?php if (isset($wmh_plugin_db_version_upgrade) && $wmh_plugin_db_version_upgrade == '1') { ?>
                                 <button type="submit" id="create-page-zip-button" class="button button-primary wmh-btn">
+                                    <span class="wmh-btn-icon-slot"><i class="fa-solid fa-download wmh-btn-static-icon"></i></span>
                                     <?php _e('Download Media', MEDIA_HYGIENE); ?>
                                 </button>
                             <?php } else { ?>
                                 <button type="submit" class="button button-primary wmh-btn update-database-msg-btn">
+                                    <span class="wmh-btn-icon-slot"><i class="fa-solid fa-download wmh-btn-static-icon"></i></span>
                                     <?php _e('Download Media', MEDIA_HYGIENE); ?>
                                 </button>
                             <?php } ?>
@@ -185,13 +192,17 @@ $wmh_plugin_db_version_upgrade = get_option('wmh_plugin_db_version_upgrade');
                             <input type="hidden" name="action" value="trash_page_media">
                             <input type="hidden" name="nonce" value="<?php echo esc_attr(wp_create_nonce('trash_page_media_nonce')); ?>">
                             <input type="hidden" name="paged" value="<?php echo esc_attr($paged); ?>" />
+                            <input type="hidden" name="attachment_cat" value="<?php echo esc_attr($filter_data); ?>" />
+                            <input type="hidden" name="date" value="<?php echo esc_attr($filter_date); ?>" />
                             <?php if (isset($wmh_plugin_db_version_upgrade) && $wmh_plugin_db_version_upgrade == '1') { ?>
                                 <button type="submit" id="trash-page-media-button" class="button button-danger wmh-btn">
-                                    <i class="fa-solid fa-spinner fa-spin trash-page-media-loader" style="display:none;"></i>&nbsp;<?php _e('Trash Current Page Media', MEDIA_HYGIENE); ?>
+                                    <span class="wmh-btn-icon-slot"><i class="fa-solid fa-spinner fa-spin trash-page-media-loader" style="display:none;"></i><i class="fa-solid fa-trash wmh-btn-static-icon"></i></span>
+                                    <?php _e('Trash Current Page Media', MEDIA_HYGIENE); ?>
                                 </button>
                             <?php } else { ?>
                                 <button type="submit" class="button button-danger wmh-btn update-database-msg-btn">
-                                    <i class="fa-solid fa-spinner fa-spin trash-page-media-loader" style="display:none;"></i>&nbsp;<?php _e('Trash Current Page Media', MEDIA_HYGIENE); ?>
+                                    <span class="wmh-btn-icon-slot"><i class="fa-solid fa-spinner fa-spin trash-page-media-loader" style="display:none;"></i><i class="fa-solid fa-trash wmh-btn-static-icon"></i></span>
+                                    <?php _e('Trash Current Page Media', MEDIA_HYGIENE); ?>
                                 </button>
                             <?php } ?>
                             <span class="tooltip-1"><i class="fa-solid fa-circle-question"></i>
@@ -212,7 +223,7 @@ $wmh_plugin_db_version_upgrade = get_option('wmh_plugin_db_version_upgrade');
                             <?php _e('Last scan:', MEDIA_HYGIENE); ?>
                             <strong>
                                 <?php
-                                echo esc_html($wmh_end_time . '&nbsp;' . $com_int_status);
+                                echo esc_html($wmh_end_time) . '&nbsp;' . esc_html($com_int_status);
                                 ?>
                             </strong>
                         </p>

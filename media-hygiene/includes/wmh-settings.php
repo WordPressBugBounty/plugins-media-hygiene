@@ -28,7 +28,7 @@ class wmh_settings
         /* Check nonce here. */
         $wp_nonce = sanitize_text_field($_POST['nonce']);
         if (!wp_verify_nonce($wp_nonce, 'save_scan_settings_nonce')) {
-            die(esc_html(__('Security check. Hacking not allowed', MEDIA_HYGIENE)));
+            wp_die(esc_html__('Security check. Hacking not allowed', MEDIA_HYGIENE), '', array('response' => 403));
         }
 
         /* Delete data on uninstall plugin. */
@@ -125,13 +125,9 @@ class wmh_settings
                 $status = sanitize_text_field($_POST['switch_status']);
             }
 
-            if ($status == 'on') {
-                /* saved permission in wp_option */
-                $updated = update_option('wmh_send_data_to_server_permission', $status, 'no');
-            } else {
-                /* saved permission in wp_option */
-                $updated = update_option('wmh_send_data_to_server_permission', $status, 'no');
-            }
+            $updated = update_option('wmh_send_data_to_server_permission', $status, 'no');
+            /* mark that the user has gone through the explicit opt-in flow */
+            update_option('wmh_analytics_consent_explicit', '1', 'no');
             if ($updated) {
                 $flg = 1;
                 $message = esc_html(__('Permission saved.', MEDIA_HYGIENE));

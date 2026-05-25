@@ -16,6 +16,7 @@ class wmh_scan
 	public $wmh_deleted_media;
 	public $wmh_used_media_post_id;
 	public $wmh_save_scan_content;
+	public $wmh_scan_known_used;
 
 	public function __construct()
 	{
@@ -32,6 +33,7 @@ class wmh_scan
 		$this->wmh_deleted_media = $this->conn->prefix . MH_PREFIX . 'deleted_media';
 		$this->wmh_used_media_post_id = $this->conn->prefix . MH_PREFIX . 'used_media_post_id';
 		$this->wmh_save_scan_content = $this->conn->prefix . MH_PREFIX . 'save_scan_content';
+		$this->wmh_scan_known_used = $this->conn->prefix . MH_PREFIX . 'scan_known_used';
 
 		/* unused images scan ajax call */
 		add_action('wp_ajax_scan_unused_images', array($this, 'fn_wmh_scan_unused_images'));
@@ -181,6 +183,13 @@ class wmh_scan
 			update_option('wmh_scan_status', '1', 'no');
 			update_option('wmh_scan_complete', 'interrupted', 'no');
 			delete_option('wmh_page_url_content');
+			/* clear Step 1 rendered-content basenames from any previous scan */
+			$this->conn->query(
+				$this->conn->prepare(
+					'DELETE FROM ' . $this->wmh_save_scan_content . ' WHERE wmh_key LIKE %s',
+					$this->conn->esc_like('wmh_step1_basenames_') . '%'
+				)
+			);
 
 			$flg = 1;
 			$output = array(
@@ -192,82 +201,146 @@ class wmh_scan
 		}
 
 		if ($ajax_call == 2) {
-			/* get URL list for scan */
-			$urls = $this->fn_wmh_get_url_list_for_scan();
+			/* build post ID list — no HTTP requests needed */
+			$wmh_scan_option_data_step1 = get_option('wmh_scan_option_data', true);
+			$excludes_post_types_step1 = isset($wmh_scan_option_data_step1['excludes_post_types']) ? (array) $wmh_scan_option_data_step1['excludes_post_types'] : [];
 
-			update_option('wmh_url_list', $urls, 'no');
-			update_option('wmh_url_list_count', count($urls), 'no');
+			$post_types_step1 = array_values(array_diff(
+				array_merge(['page', 'post']),
+				$excludes_post_types_step1
+			));
 
-			if (empty($urls)) {
+			$post_ids_step1 = get_posts([
+				'post_type'      => $post_types_step1,
+				'fields'         => 'ids',
+				'posts_per_page' => -1,
+				'post_status'    => ['publish', 'draft'],
+			]);
+
+			update_option('wmh_url_list', $post_ids_step1, 'no');
+			update_option('wmh_url_list_count', count($post_ids_step1), 'no');
+
+			if (empty($post_ids_step1)) {
 				$flg = 2;
-				$output = array(
-					'flg' => $flg,
-				);
-				echo json_encode($output);
-				wp_die();
-			} else {
-				$flg = 1;
-				$output = array(
-					'flg' => $flg,
-					'ajax_call' => $ajax_call,
-				);
-				echo json_encode($output);
+				echo json_encode(['flg' => $flg]);
 				wp_die();
 			}
+
+			$flg = 1;
+			echo json_encode(['flg' => $flg, 'ajax_call' => $ajax_call]);
+			wp_die();
 		}
 
-		/* get URL list for scan */
-		$urls = (array) get_option('wmh_url_list');
-		$total_urls = (int) get_option('wmh_url_list_count');
+		/* in-process content rendering — 50 posts per AJAX call, no HTTP requests */
+		$post_ids_list   = (array) get_option('wmh_url_list');
+		$total_ids_list  = (int) get_option('wmh_url_list_count');
+		$per_batch       = 50;
+		$batch_offset    = ($ajax_call - 3) * $per_batch;
+		$batch_ids       = array_slice($post_ids_list, $batch_offset, $per_batch);
+		$total_ajax_call = (int) ceil(max($total_ids_list, 1) / $per_batch);
 
-		/* by pagination */
-		$urls_to_scan = [];
-		$per_url = 1;
-		$offset = ($ajax_call - 1) * $per_url;
-		$urls_to_scan = array_slice($urls, $offset, $per_url);
+		$percentage          = (float) (100 / $total_ajax_call);
+		$progress_bar_width  = number_format(($progress_bar + $percentage), 2);
 
-		/* count total ajax call */
-		$total_ajax_call = (int) ceil(($total_urls / $per_url));
-
-		/* get progress bar width and percentage */
-		$percentage = (float) (100 / $total_ajax_call);
-		$progress_bar_width = number_format(($progress_bar + $percentage), 2);
-
-		/* get used images by url content */
-		$results = $this->fn_get_content_from_url($urls_to_scan);
-
-		/* check option data */
-		$previous_data = get_option('wmh_page_url_content');
-		if (is_array($previous_data) && !empty($previous_data)) {
-			if (is_array($results) && !empty($results)) {
-				$new_results = array_merge($previous_data, $results);
-			} else {
-				$new_results = $previous_data;
+		$step1_basenames = [];
+		foreach ($batch_ids as $batch_post_id) {
+			$batch_post = get_post($batch_post_id);
+			if (!$batch_post) continue;
+			try {
+				/* apply_filters renders shortcodes, Gutenberg blocks, page builder output */
+				$rendered = apply_filters('the_content', $batch_post->post_content);
+			} catch (\Throwable $e) {
+				$this->fn_wmh_log('step1_render', 'Skipped post ' . $batch_post_id . ': ' . $e->getMessage());
+				continue;
 			}
-		} else {
-			$new_results = $results;
+			/* src/href upload references */
+			preg_match_all('/(src|href)=["\']([^"\']*\/wp-content\/uploads\/[^"\']+)["\']/', $rendered, $sm);
+			if (!empty($sm[2])) {
+				foreach ($sm[2] as $found_url) {
+					$b = wp_basename($found_url);
+					if ($b) $step1_basenames[] = $b;
+				}
+			}
+			/* inline background-image CSS */
+			preg_match_all('/url\(["\']?([^"\'()]*\/wp-content\/uploads\/[^"\'()]+)["\']?\)/', $rendered, $bm);
+			if (!empty($bm[1])) {
+				foreach ($bm[1] as $found_url) {
+					$b = wp_basename($found_url);
+					if ($b) $step1_basenames[] = $b;
+				}
+			}
 		}
-		update_option('wmh_page_url_content', array_unique($new_results), 'no');
+		$step1_basenames = array_values(array_filter(array_unique($step1_basenames)));
+		if (!empty($step1_basenames)) {
+			$this->fn_wmh_insert_save_content($step1_basenames, 'wmh_step1_basenames_' . $ajax_call);
+		}
 
 		if ($ajax_call == ($total_ajax_call + 2)) {
+			try {
+			/* final batch — also scan theme mods and widgets */
+			$theme_widget_basenames = [];
+
+			$theme_mods_data = get_theme_mods();
+			if (!empty($theme_mods_data)) {
+				array_walk_recursive($theme_mods_data, function ($v) use (&$theme_widget_basenames) {
+					if (is_string($v) && str_contains($v, '/wp-content/uploads/')) {
+						$b = wp_basename($v);
+						if ($b) $theme_widget_basenames[] = $b;
+					}
+				});
+			}
+
+			$widget_opt_rows = $this->conn->get_results(
+				"SELECT option_value FROM {$this->conn->options} WHERE option_name LIKE 'widget_%'",
+				ARRAY_A
+			);
+			foreach ($widget_opt_rows as $widget_row) {
+				$widget_json = json_encode(maybe_unserialize($widget_row['option_value']));
+				preg_match_all('/\/wp-content\/uploads\/[^"\')\s,>]+/', $widget_json, $wm);
+				foreach ($wm[0] as $found_url) {
+					$b = wp_basename(rtrim($found_url, '\\/.,;'));
+					if ($b) $theme_widget_basenames[] = $b;
+				}
+			}
+
+			$css_post_id_step1 = (int) get_option('custom_css_post_id');
+			if ($css_post_id_step1 > 0) {
+				$css_post_step1 = get_post($css_post_id_step1);
+				if ($css_post_step1 && $css_post_step1->post_content) {
+					preg_match_all('/url\(["\']?([^"\'()]*\/wp-content\/uploads\/[^"\'()]+)["\']?\)/', $css_post_step1->post_content, $cm);
+					foreach ($cm[1] as $found_url) {
+						$b = wp_basename($found_url);
+						if ($b) $theme_widget_basenames[] = $b;
+					}
+				}
+			}
+
+			$theme_widget_basenames = array_values(array_filter(array_unique($theme_widget_basenames)));
+			if (!empty($theme_widget_basenames)) {
+				$this->fn_wmh_insert_save_content($theme_widget_basenames, 'wmh_step1_basenames_theme');
+			}
 
 			delete_option('wmh_url_list');
 			delete_option('wmh_url_list_count');
+			delete_option('wmh_page_url_content');
 
 			$flg = 2;
-			$message = __('Scan completed.', MEDIA_HYGIENE);
-			$output = array(
-				'flg' => $flg,
-				'message' => $message
-			);
+			$output = ['flg' => $flg, 'message' => __('Scan completed.', MEDIA_HYGIENE)];
+			} catch (\Throwable $e) {
+				echo json_encode([
+					'flg'     => -1,
+					'message' => 'Content scan error (theme/widget pass): ' . $e->getMessage(),
+				]);
+				wp_die();
+			}
 		} else {
 			$flg = 1;
-			$output = array(
-				'flg' => $flg,
-				'total_ajax_call' => $total_ajax_call,
-				'ajax_call' => $ajax_call,
-				'progress_bar_width' => $progress_bar_width
-			);
+			$output = [
+				'flg'                => $flg,
+				'total_ajax_call'    => $total_ajax_call,
+				'ajax_call'          => $ajax_call,
+				'progress_bar_width' => $progress_bar_width,
+			];
 		}
 		echo json_encode($output);
 		wp_die();
@@ -294,19 +367,19 @@ class wmh_scan
 		/* progress bar */
 		$progress_bar = sanitize_text_field($_POST['progress_bar']);
 
-		/* get all plugin list */
-		$all_plugins = get_plugins();
-
-		/* get all theme list */
-		$all_themes = wp_get_themes();
-
 		if ($ajax_call == 1) {
 			/* copy unused media table data in temp table */
 			$this->conn->query(' TRUNCATE TABLE ' . $this->wmh_temp . ' ');
 			$this->conn->query('INSERT INTO ' . $this->wmh_temp . ' SELECT * FROM ' . $this->wmh_unused_media_post_id . ' ');
 			$this->conn->query(' TRUNCATE TABLE ' . $this->wmh_unused_media_post_id . ' ');
 			$this->conn->query(' TRUNCATE TABLE ' . $this->wmh_used_media_post_id . ' ');
-			$this->conn->query(' TRUNCATE TABLE ' . $this->wmh_save_scan_content . ' ');
+			/* preserve Step 1 rendered-content basenames — needed by call 12 to build the known-used index */
+			$this->conn->query(
+				$this->conn->prepare(
+					'DELETE FROM ' . $this->wmh_save_scan_content . ' WHERE wmh_key NOT LIKE %s',
+					$this->conn->esc_like('wmh_step1_basenames_') . '%'
+				)
+			);
 			$flg = 1;
 			$progress_bar = 0;
 		}
@@ -340,6 +413,7 @@ class wmh_scan
 
 		/* save elemntor data */
 		if ($ajax_call == 5) {
+			$all_plugins = get_plugins();
 			if ((array_key_exists('elementor/elementor.php', $all_plugins)) || (array_key_exists('elementor-pro/elementor-pro.php', $all_plugins))) {
 				$flg = 3;
 			} else {
@@ -350,6 +424,7 @@ class wmh_scan
 
 		/*  save Divi theme data */
 		if ($ajax_call == 6) {
+			$all_themes = wp_get_themes();
 			$divi_post_content = array();
 			if (array_key_exists('Divi', $all_themes)) {
 				$wmh_divi = new wmh_divi();
@@ -364,6 +439,7 @@ class wmh_scan
 
 		/*  save Bricks data  */
 		if ($ajax_call == 7) {
+			$all_themes = wp_get_themes();
 			$bricks_post_content = array();
 			$bricks_temp_data_header = array();
 			$bricks_temp_data_footer = array();
@@ -398,6 +474,7 @@ class wmh_scan
 
 		/* save visual composer theme builder data */
 		if ($ajax_call == 8) {
+			$all_plugins = get_plugins();
 			$vc_post_content = array();
 			$vc_tmp_data = array();
 			if (array_key_exists('visualcomposer/plugin-wordpress.php', $all_plugins) || array_key_exists('visualcomposer-pro/plugin-wordpress.php', $all_plugins)) {
@@ -420,6 +497,7 @@ class wmh_scan
 
 		/* save enfold theme layer slider data */
 		if ($ajax_call == 9) {
+			$all_themes = wp_get_themes();
 			$enfold_layerslider_data = array();
 			if (array_key_exists('enfold', $all_themes)) {
 				$wmh_enfold = new wmh_enfold();
@@ -435,6 +513,7 @@ class wmh_scan
 
 		/* get oceanWP theme custom logo and set background image */
 		if ($ajax_call == 10) {
+			$all_themes = wp_get_themes();
 			$theme_mode_data = array();
 			$ocean_logo = array();
 			if (array_key_exists('oceanwp', $all_themes)) {
@@ -471,8 +550,210 @@ class wmh_scan
 			$mh_key = 'wmh_whitelist_media_post_ids';
 			$this->fn_wmh_insert_save_content($whitelist_media_post_ids, $mh_key);
 
-			$flg = 2;
-			$progress_bar = 100;
+			/* advance to call 12 which builds the known-used index */
+			$flg = 1;
+			$progress_bar = 95;
+		}
+
+		if ($ajax_call == 12) {
+			try {
+				@set_time_limit(300);
+
+				/* ensure table exists for sites upgraded without re-activating plugin */
+				require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
+				$wmh_scan_known_used_sql = "CREATE TABLE IF NOT EXISTS " . $this->wmh_scan_known_used . "(
+					`id` int NOT NULL AUTO_INCREMENT,
+					`post_id` int NULL,
+					`basename` varchar(255) NULL,
+					PRIMARY KEY (`id`),
+					KEY `idx_post_id` (`post_id`),
+					KEY `idx_basename` (`basename`(191)));";
+				dbDelta($wmh_scan_known_used_sql);
+
+				$this->conn->query('TRUNCATE TABLE ' . $this->wmh_scan_known_used);
+
+				/* ── Helper: batch-insert post IDs ── */
+				$insert_post_ids = function (array $ids) {
+					$ids = array_values(array_filter(array_map('intval', $ids)));
+					foreach (array_chunk($ids, 500) as $chunk) {
+						if (empty($chunk)) continue;
+						$placeholders = implode(',', array_fill(0, count($chunk), '(%d)'));
+						$this->conn->query(
+							$this->conn->prepare(
+								"INSERT IGNORE INTO {$this->wmh_scan_known_used} (post_id) VALUES $placeholders",
+								$chunk
+							)
+						);
+					}
+				};
+
+				/* ── Helper: batch-insert basenames ── */
+				$insert_basenames = function (array $items) {
+					$bns = [];
+					foreach ($items as $item) {
+						if (!is_string($item) || $item === '') continue;
+						$b = wp_basename($item);
+						if ($b && str_contains($b, '.')) $bns[] = $b;
+					}
+					$bns = array_values(array_unique($bns));
+					foreach (array_chunk($bns, 500) as $chunk) {
+						if (empty($chunk)) continue;
+						$placeholders = implode(',', array_fill(0, count($chunk), '(%s)'));
+						$this->conn->query(
+							$this->conn->prepare(
+								"INSERT IGNORE INTO {$this->wmh_scan_known_used} (basename) VALUES $placeholders",
+								$chunk
+							)
+						);
+					}
+				};
+
+				/* ── Helper: extract basenames from HTML/JSON string via regex ── */
+				$extract_from_content = function ($content) use ($insert_basenames) {
+					if (!is_string($content) || $content === '') return;
+					$found = [];
+					preg_match_all('/\/wp-content\/uploads\/[^"\')\s,>]+/', $content, $m);
+					foreach ($m[0] as $u) {
+						$b = wp_basename(rtrim($u, '\\/.,;'));
+						if ($b && str_contains($b, '.')) $found[] = $b;
+					}
+					if (!empty($found)) $insert_basenames($found);
+				};
+
+				/* ── ID-based sources ── */
+				$id_keys_12 = [
+					'wmh_page_post_feature_image_ids_data',
+					'wmh_whitelist_media_post_ids',
+				];
+				foreach ($id_keys_12 as $id_key_12) {
+					$id_data_12 = $this->fn_wmh_get_save_content_data($id_key_12);
+					if (!empty($id_data_12) && is_array($id_data_12)) {
+						$insert_post_ids($id_data_12);
+					}
+				}
+
+				/* site_logo and site_icon */
+				foreach (['site_logo', 'site_icon'] as $site_opt_12) {
+					$site_opt_id_12 = (int) get_option($site_opt_12);
+					if ($site_opt_id_12 > 0) {
+						$this->conn->query(
+							$this->conn->prepare(
+								"INSERT IGNORE INTO {$this->wmh_scan_known_used} (post_id) VALUES (%d)",
+								$site_opt_id_12
+							)
+						);
+					}
+				}
+
+				/* OceanWP logo IDs */
+				$ocean_logo_12 = $this->fn_wmh_get_save_content_data('wmh_ocean_logo_data');
+				if (!empty($ocean_logo_12)) {
+					foreach (['ocean_custom_logo', 'ocean_custom_retina_logo'] as $logo_key_12) {
+						if (!empty($ocean_logo_12[$logo_key_12]) && is_array($ocean_logo_12[$logo_key_12])) {
+							$insert_post_ids($ocean_logo_12[$logo_key_12]);
+						}
+					}
+				}
+
+				/* OceanWP custom_logo ID */
+				$theme_mode_12 = $this->fn_wmh_get_save_content_data('wmh_theme_mode_data');
+				if (!empty($theme_mode_12['custom_logo'])) {
+					$insert_post_ids([(int) $theme_mode_12['custom_logo']]);
+				}
+
+				/* Divi gallery IDs */
+				$divi_12 = $this->fn_wmh_get_save_content_data('wmh_divi_post_content_data');
+				if (!empty($divi_12['gallery_ids']) && is_array($divi_12['gallery_ids'])) {
+					foreach ($divi_12['gallery_ids'] as $gallery_str_12) {
+						$gids = array_filter(array_map('intval', explode(',', (string) $gallery_str_12)));
+						if (!empty($gids)) $insert_post_ids(array_values($gids));
+					}
+				}
+
+				/* ── Step 1 rendered-content basenames ── */
+				$step1_all_12 = $this->fn_wmh_get_save_content_data_all('wmh_step1_basenames_');
+				if (!empty($step1_all_12)) $insert_basenames($step1_all_12);
+
+				/* ── Raw post/page content basenames (already extracted as basenames) ── */
+				foreach (['wmh_post_content_data', 'wmh_page_content_data'] as $content_key_12) {
+					$raw_12 = $this->fn_wmh_get_save_content_data($content_key_12);
+					if (!empty($raw_12) && is_array($raw_12)) $insert_basenames($raw_12);
+				}
+
+				/* ── Elementor (multiple rows) ── */
+				$el_sql_12 = $this->conn->prepare(
+					'SELECT wmh_value FROM ' . $this->wmh_save_scan_content . ' WHERE wmh_key = %s',
+					'wmh_elementor_data'
+				);
+				$el_rows_12 = $this->conn->get_results($el_sql_12, ARRAY_A);
+				if (!empty($el_rows_12)) {
+					foreach ($el_rows_12 as $el_row_12) {
+						$el_decoded_12 = json_decode($el_row_12['wmh_value'], true);
+						if (is_array($el_decoded_12)) {
+							foreach ($el_decoded_12 as $el_content_12) {
+								$extract_from_content(is_string($el_content_12) ? $el_content_12 : json_encode($el_content_12));
+							}
+						}
+					}
+				}
+
+				/* ── Other content sources (HTML/JSON — extract via regex) ── */
+				$other_keys_12 = [
+					'wmh_divi_post_content_data',
+					'wmh_bricks_post_content_data',
+					'wmh_bricks_temp_header_data',
+					'wmh_bricks_temp_footer_data',
+					'wmh_bricks_temp_page_data',
+					'wmh_vc_post_content_data',
+					'wmh_vc_tmp_data_data',
+					'wmh_enfold_layerslider_data',
+				];
+				foreach ($other_keys_12 as $ok_12) {
+					$ok_data_12 = $this->fn_wmh_get_save_content_data($ok_12);
+					if (empty($ok_data_12)) continue;
+					if (is_string($ok_data_12)) {
+						$extract_from_content($ok_data_12);
+					} elseif (is_array($ok_data_12)) {
+						foreach ($ok_data_12 as $ok_item_12) {
+							$extract_from_content(is_string($ok_item_12) ? $ok_item_12 : json_encode($ok_item_12));
+						}
+					}
+				}
+
+				/* Divi content strings */
+				if (!empty($divi_12['content']) && is_array($divi_12['content'])) {
+					foreach ($divi_12['content'] as $divi_content_12) {
+						$extract_from_content($divi_content_12);
+					}
+				}
+
+				/* OceanWP background image */
+				if (!empty($theme_mode_12['background_image'])) {
+					$extract_from_content($theme_mode_12['background_image']);
+				}
+
+				/* Legacy wmh_page_url_content option (backwards compat) */
+				$legacy_12 = get_option('wmh_page_url_content', []);
+				if (!empty($legacy_12) && is_array($legacy_12)) {
+					foreach ($legacy_12 as $legacy_url_12) {
+						$extract_from_content(is_string($legacy_url_12) ? $legacy_url_12 : '');
+					}
+					delete_option('wmh_page_url_content');
+				}
+
+				$flg = 2;
+				$progress_bar = 100;
+			} catch (\Throwable $e) {
+				echo json_encode([
+					'flg'                => -1,
+					'ajax_call'          => $ajax_call,
+					'progress_bar_width' => $progress_bar,
+					'error'              => $e->getMessage(),
+					'file'               => basename($e->getFile()),
+					'line'               => $e->getLine(),
+				]);
+				wp_die();
+			}
 		}
 
 		$output = array(
@@ -505,6 +786,28 @@ class wmh_scan
 			$content = json_decode($data['wmh_value'], true);
 		}
 		return $content;
+	}
+
+	/* Fetch and merge all rows whose wmh_key starts with $key_prefix. */
+	public function fn_wmh_get_save_content_data_all($key_prefix = '')
+	{
+		$results = [];
+		$sql = $this->conn->prepare(
+			'SELECT wmh_value FROM ' . $this->wmh_save_scan_content . ' WHERE wmh_key LIKE %s',
+			$this->conn->esc_like($key_prefix) . '%'
+		);
+		$rows = $this->conn->get_results($sql, ARRAY_A);
+		if (!empty($rows)) {
+			foreach ($rows as $row) {
+				$decoded = json_decode($row['wmh_value'], true);
+				if (is_array($decoded)) {
+					$results = array_merge($results, $decoded);
+				} elseif ($decoded !== null) {
+					$results[] = $decoded;
+				}
+			}
+		}
+		return $results;
 	}
 
 	public function fn_wmh_get_url_list_for_scan()
@@ -610,16 +913,16 @@ class wmh_scan
 		$progress_bar = sanitize_text_field($_POST['progress_bar']);
 
 		/* get scan option data */
-		$wmh_scan_option_data =  get_option('wmh_scan_option_data', true);
+		$wmh_scan_option_data = get_option('wmh_scan_option_data', []);
 
 		/* exclude extension string */
-		$exclude_exs = $wmh_scan_option_data['ex_file_ex'];
+		$exclude_exs = isset($wmh_scan_option_data['ex_file_ex']) ? $wmh_scan_option_data['ex_file_ex'] : '';
 
 		/* total attachments count */
 		$total_attachments = (int) get_option('wmh_all_attachment_ids');
 
 		/* get post_type attachment data by offset */
-		$per_post = $wmh_scan_option_data['number_of_image_scan'];
+		$per_post = isset($wmh_scan_option_data['number_of_image_scan']) ? (int) $wmh_scan_option_data['number_of_image_scan'] : 30;
 		$offset = ($ajax_call - 1) * $per_post;
 		$attachments = $this->fn_wmh_get_post_type_attachment_data($offset, $per_post);
 
@@ -630,111 +933,36 @@ class wmh_scan
 		$percentage = (100 / $total_ajax_call);
 		$progress_bar_width = number_format(($progress_bar + $percentage), 2);
 
-		/* get site logo */
-		$site_logo = get_option('site_logo');
-
-		/* get site icon */
-		$site_icon =  get_option('site_icon');
-
-		/* get page url scan content data */
-		$wmh_page_url_content = get_option('wmh_page_url_content');
-
-		/* get post content */
-		$mh_key = 'wmh_post_content_data';
-		$post_content = $this->fn_wmh_get_save_content_data($mh_key);
-
-		/* get page content */
-		$mh_key = 'wmh_page_content_data';
-		$page_content = $this->fn_wmh_get_save_content_data($mh_key);
-
-		/* get page and post feature images ids */
-		$mh_key = 'wmh_page_post_feature_image_ids_data';
-		$page_post_thumbnail_ids = $this->fn_wmh_get_save_content_data($mh_key);
-
-		/* get elementor data, with post and page content build by elementor including prime slider addons */
-		$mh_key = 'wmh_elementor_data';
-		$elementor_result = array();
-		$sql = $this->conn->prepare('SELECT wmh_value FROM ' . $this->wmh_save_scan_content . ' WHERE wmh_key = %s', $mh_key);
-		$elementor_content = $this->conn->get_results($sql, ARRAY_A);
-		if (!empty($elementor_content)) {
-			foreach ($elementor_content as $ec) {
-				$elementor_result_loop = json_decode($ec['wmh_value'], true);
-				if (!empty($elementor_result_loop)) {
-					foreach ($elementor_result_loop as $erl) {
-						array_push($elementor_result, $erl);
-					}
-				}
-			}
-			$elementor_result = array_unique($elementor_result);
-		}
-
-		/*  get Divi theme data */
-		$mh_key = 'wmh_divi_post_content_data';
-		$divi_post_content = $this->fn_wmh_get_save_content_data($mh_key);
-
-		/* get Bricks data */
-		/* get bricks data content */
-		$mh_key = 'wmh_bricks_post_content_data';
-		$bricks_post_content =  $this->fn_wmh_get_save_content_data($mh_key);
-		/* get bricks template data for header */
-		$mh_key = 'wmh_bricks_temp_header_data';
-		$bricks_temp_data_header =  $this->fn_wmh_get_save_content_data($mh_key);
-		/* get bricks template data for footer */
-		$mh_key = 'wmh_bricks_temp_footer_data';
-		$bricks_temp_data_footer =  $this->fn_wmh_get_save_content_data($mh_key);
-		/* get bricks template data for page */
-		$mh_key = 'wmh_bricks_temp_page_data';
-		$bricks_temp_data_page =  $this->fn_wmh_get_save_content_data($mh_key);
-
-		/* get visual composer data */
-		$mh_key = 'wmh_vc_post_content_data';
-		$vc_post_content =  $this->fn_wmh_get_save_content_data($mh_key);
-		/* get visual composer template data */
-		$mh_key = 'wmh_vc_tmp_data_data';
-		$vc_tmp_data =  $this->fn_wmh_get_save_content_data($mh_key);
-
-		/* get enfold theme layer slider data */
-		$mh_key = 'wmh_enfold_layerslider_data';
-		$enfold_layerslider_data = $this->fn_wmh_get_save_content_data($mh_key);
-
-		/* get oceanWP theme custom logo and set background image */
-		/* custom logo and set background image */
-		$mh_key = 'wmh_theme_mode_data';
-		$theme_mode_data = $this->fn_wmh_get_save_content_data($mh_key);
-		/* ocean custom logo and ocean custom retina logo */
-		$mh_key = 'wmh_ocean_logo_data';
-		$ocean_logo =  $this->fn_wmh_get_save_content_data($mh_key);
-
-		/* oceanWP theme data scan by page and post */
-		/* Astra theme data scan by post and page */
-		/* Avada theme data autometic scan by page and post */
-		/* WP bakery theme data autometic scan by page and post */
-		/* Beaver builder theme data autometic scan by page and post */
-		/* Enfold theme data scan by page and post, here some content not scan by page and post like Advanced layer slider */
-		/* Flatsome theme data scan by page and post */
-
-		/* get whitelist media id to avoid whitelist media */
-		$mh_key = 'wmh_whitelist_media_post_ids';
-		$wl_post_ids = $this->fn_wmh_get_save_content_data($mh_key);
-
 		if (!empty($attachments)) {
 			/* size array */
 			$media_size_array = array();
 			/* get all intermediate image sizes */
 			$size_type = get_intermediate_image_sizes();
 			array_push($size_type, 'full');
+
+			/* Batch-load mime type and post_date — 1 query instead of N individual get_post() calls */
+			$mime_map = [];
+			$date_map = [];
+			$id_list  = implode(',', array_map('intval', $attachments));
+			$batch_rows = $this->conn->get_results(
+				"SELECT ID, post_mime_type, post_date FROM {$this->wp_posts} WHERE ID IN ($id_list)",
+				ARRAY_A
+			);
+			foreach ($batch_rows as $row) {
+				$mime_map[(int)$row['ID']] = $row['post_mime_type'];
+				$date_map[(int)$row['ID']] = $row['post_date'];
+			}
+			/* Prime the post metadata cache — eliminates per-attachment meta DB queries
+			 * (covers wp_get_attachment_metadata, wp_get_original_image_url, wp_get_attachment_url) */
+			update_meta_cache('post', array_map('intval', $attachments));
+
 			foreach ($attachments as $id) {
+				try {
 				$all_urls = array();
-				/* check whitelist media and ignore */
-				if (!empty($wl_post_ids)) {
-					if (in_array($id, $wl_post_ids)) {
-						continue;
-					}
-				}
 				/* default flg */
 				$flg = 0;
 				/* get post mime type */
-				$post_mime_type = sanitize_mime_type(get_post_mime_type($id));
+				$post_mime_type = sanitize_mime_type($mime_map[(int)$id] ?? '');
 				if (str_contains($post_mime_type, 'image')) {
 					$guid = wp_get_original_image_url($id);
 					/* exclude dir file already make use */
@@ -761,221 +989,26 @@ class wmh_scan
 					$all_urls = array_unique($all_urls);
 				}
 
-				/* check site logo */
-				if ($site_logo != '') {
-					if ($site_logo == $id) {
-						$flg = 1;
+				/* check if this attachment is known-used via pre-computed index (built in Step 2 call 12) */
+				if ($flg == 0 && !empty($all_urls)) {
+					$attachment_basenames = [];
+					foreach ($all_urls as $attachment_url) {
+						$b = wp_basename($attachment_url);
+						if ($b) $attachment_basenames[] = $b;
 					}
-				}
+					$attachment_basenames = array_values(array_filter(array_unique($attachment_basenames)));
 
-				/* check site icon. */
-				if ($site_icon != '') {
-					if ($site_icon == $id) {
-						$flg = 1;
-					}
-				}
-
-				/* check page and post thumbnail id*/
-				if (isset($page_post_thumbnail_ids) && !empty($page_post_thumbnail_ids)) {
-					if (in_array($id, $page_post_thumbnail_ids)) {
-						$flg = 1;
-					}
-				}
-
-				/* check oceanWP theme data */
-				if (!empty($theme_mode_data)) {
-					/* check oceanWP custom logo */
-					if ($theme_mode_data['custom_logo'] != '') {
-						if ($theme_mode_data['custom_logo'] ==  $id) {
+					if (!empty($attachment_basenames)) {
+						$bn_ph = implode(',', array_fill(0, count($attachment_basenames), '%s'));
+						$is_known_used = (bool) $this->conn->get_var(
+							$this->conn->prepare(
+								"SELECT 1 FROM {$this->wmh_scan_known_used}
+								 WHERE post_id = %d OR basename IN ($bn_ph) LIMIT 1",
+								array_merge([(int) $id], $attachment_basenames)
+							)
+						);
+						if ($is_known_used) {
 							$flg = 1;
-						}
-					}
-				}
-
-				/* check logos */
-				if (!empty($ocean_logo)) {
-					/* check custom logo */
-					if (!empty($ocean_logo['ocean_custom_logo'])) {
-						if (in_array($id, $ocean_logo['ocean_custom_logo'])) {
-							$flg = 1;
-						}
-					}
-					/* check custom retina logo */
-					if (!empty($ocean_logo['ocean_custom_retina_logo'])) {
-						if (in_array($id, $ocean_logo['ocean_custom_retina_logo'])) {
-							$flg = 1;
-						}
-					}
-				}
-
-				/* check divi gallery ids */
-				if (isset($divi_post_content) && !empty($divi_post_content)) {
-					if (!empty($divi_post_content['gallery_ids'])) {
-						foreach ($divi_post_content['gallery_ids'] as $post_ids) {
-							/* check Divi theme data for type gallery by id. */
-							if (str_contains($post_ids, (string) $id)) {
-								$flg = 1;
-								break;
-							}
-						}
-					}
-				}
-
-				if (!empty($all_urls)) {
-					/* basename of url */
-					foreach ($all_urls as $urls) {
-						$url = wp_basename($urls);
-						/* check url content */
-						if (!empty($wmh_page_url_content)) {
-							foreach ($wmh_page_url_content as $check_url) {
-								if (str_contains($check_url, $url)) {
-									$flg = 1;
-									break;
-								}
-							}
-						}
-
-						/* check post content */
-						if (!empty($post_content) && (is_array($post_content) || is_object($post_content))) {
-							foreach ($post_content as $pc) {
-								if ($pc != '') {
-									if (str_contains($pc, $url)) {
-										$flg = 1;
-										break;
-									}
-								}
-							}
-						}
-
-						/* check page content */
-						if (!empty($page_content) && (is_array($page_content) || is_object($page_content))) {
-							foreach ($page_content as $pc) {
-								if ($pc != '') {
-									if (str_contains($pc, $url)) {
-										$flg = 1;
-										break;
-									}
-								}
-							}
-						}
-
-						/* check elementor data. */
-						if (!empty($elementor_result)) {
-							foreach ($elementor_result as $er) {
-								if ($er != '') {
-									if (str_contains($er, $url)) {
-										$flg = 1;
-										break;
-									}
-								}
-							}
-						}
-
-						/* some of module of divi scan by guid*/
-						if (isset($divi_post_content) && !empty($divi_post_content)) {
-							if (!empty($divi_post_content['content'])) {
-								foreach ($divi_post_content['content'] as $post_content) {
-									if (str_contains($post_content, $url)) {
-										$flg = 1;
-										break;
-									}
-								}
-							}
-						}
-
-						/* check Bricks data */
-						if (isset($bricks_post_content) && !empty($bricks_post_content)) {
-							foreach ($bricks_post_content as $br_url) {
-								if ($br_url != '') {
-									if (str_contains($br_url,  $url)) {
-										$flg = 1;
-										break;
-									}
-								}
-							}
-						}
-
-						/* check bricks template data for header */
-						if (isset($bricks_temp_data_header) && !empty($bricks_temp_data_header)) {
-							foreach ($bricks_temp_data_header as $temp_data) {
-								if ($temp_data != '') {
-									if (str_contains($temp_data,  $url)) {
-										$flg = 1;
-										break;
-									}
-								}
-							}
-						}
-
-						/* check bricks template data for footer */
-						if (isset($bricks_temp_data_footer) && !empty($bricks_temp_data_footer)) {
-							foreach ($bricks_temp_data_footer as $temp_data) {
-								if ($temp_data != '') {
-									if (str_contains($temp_data,  $url)) {
-										$flg = 1;
-										break;
-									}
-								}
-							}
-						}
-
-						/* check bricks template data for page */
-						if (isset($bricks_temp_data_page) && !empty($bricks_temp_data_page)) {
-							foreach ($bricks_temp_data_page as $temp_data) {
-								if ($temp_data != '') {
-									if (str_contains($temp_data,  $url)) {
-										$flg = 1;
-										break;
-									}
-								}
-							}
-						}
-
-						/* check visual composer data */
-						if (isset($vc_post_content) && !empty($vc_post_content)) {
-							foreach ($vc_post_content as $vc_content) {
-								if ($vc_content != '') {
-									if (str_contains($vc_content,  $url)) {
-										$flg = 1;
-										break;
-									}
-								}
-							}
-						}
-
-						/* check visual composer data for template */
-						if (isset($vc_tmp_data) && !empty($vc_tmp_data)) {
-							foreach ($vc_tmp_data as $vc_data) {
-								if ($vc_data != '') {
-									$json_vc_data = json_encode($vc_data);
-									if (str_contains($json_vc_data,  $url)) {
-										$flg = 1;
-										break;
-									}
-								}
-							}
-						}
-
-						/* check Enfold theme layer slider data */
-						if (isset($enfold_layerslider_data) && !empty($enfold_layerslider_data)) {
-							foreach ($enfold_layerslider_data as $layer_data) {
-								if ($layer_data) {
-									if (str_contains($layer_data,  $url)) {
-										$flg = 1;
-										break;
-									}
-								}
-							}
-						}
-
-						/* check oceanWP theme data */
-						if (!empty($theme_mode_data)) {
-							/* check oceanWP set background image */
-							if ($theme_mode_data['background_image'] != '') {
-								if (str_contains($theme_mode_data['background_image'],  $url)) {
-									$flg = 1;
-								}
-							}
 						}
 					}
 				}
@@ -994,7 +1027,7 @@ class wmh_scan
 				}
 
 				/* get post date to insert. */
-				$post_date = get_the_date('Y-m-d H:i:s', $id);
+				$post_date = $date_map[(int)$id] ?? '';
 
 				/* calculate size */
 				$post_size = array_sum($this->fn_wmh_calculate_size($id, $post_mime_type, $media_size_array));
@@ -1028,6 +1061,9 @@ class wmh_scan
 				} else if ($flg == 1) {
 					$this->conn->insert($this->wmh_used_media_post_id, $insert_array);
 				}
+				} catch (\Throwable $e) {
+					$this->fn_wmh_log('step3_classify', 'Skipped attachment ' . $id . ': ' . $e->getMessage());
+				}
 			}
 		}
 
@@ -1035,6 +1071,7 @@ class wmh_scan
 			/* truncate temp table data is scan is complete */
 			$this->conn->query(' TRUNCATE TABLE ' . $this->wmh_temp . ' ');
 			$this->conn->query(' TRUNCATE TABLE ' . $this->wmh_save_scan_content . ' ');
+			$this->conn->query(' TRUNCATE TABLE ' . $this->wmh_scan_known_used . ' ');
 			update_option('wmh_new_update_after_scan', '1.0.3', 'no');
 			/* set status for last scan, it is intruppted or not */
 			update_option('wmh_scan_complete', 'completed', 'no');
@@ -1063,60 +1100,76 @@ class wmh_scan
 	/* get post type attachment data function */
 	public function fn_wmh_get_post_type_attachment_data($offset = '', $per_post = '')
 	{
-		$attachments = [];
-		$att_sql = " SELECT ID FROM $this->wp_posts WHERE post_type = 'attachment' AND post_status != 'trash' LIMIT $per_post OFFSET $offset ";
-		$attr_result = $this->conn->get_results($att_sql, ARRAY_A);
-		if (isset($attr_result) && !empty($attr_result)) {
-			foreach ($attr_result as $id) {
-				array_push($attachments, $id['ID']);
-			}
-		}
-		return $attachments;
+		return $this->conn->get_col(
+			$this->conn->prepare(
+				"SELECT ID FROM {$this->wp_posts}
+				 WHERE post_type = 'attachment' AND post_status != 'trash'
+				 ORDER BY ID ASC
+				 LIMIT %d OFFSET %d",
+				(int) $per_post,
+				(int) $offset
+			)
+		);
 	}
 
-	/* check post content */
+	/* check post content — returns array of upload basenames found in post_content rows */
 	public function fn_wmh_check_post_content()
 	{
-		$check_post_content_sql =  'SELECT post_content FROM ' . $this->wp_posts . ' WHERE post_type = "post"';
-		$post_content_data =  $this->conn->get_results($check_post_content_sql, ARRAY_A);
-		$content = array();
-		if (isset($post_content_data) && !empty($post_content_data)) {
-			foreach ($post_content_data as $post_content) {
-				if ($post_content['post_content'] != '') {
-					$data = htmlentities($post_content['post_content']);
-					array_push($content, $data);
+		$basenames = [];
+		$chunk_size = 200;
+		$offset = 0;
+		do {
+			$sql = $this->conn->prepare(
+				'SELECT post_content FROM ' . $this->wp_posts . ' WHERE post_type = "post" AND post_content != "" LIMIT %d OFFSET %d',
+				$chunk_size, $offset
+			);
+			$rows = $this->conn->get_results($sql, ARRAY_A);
+			if (empty($rows)) break;
+			foreach ($rows as $row) {
+				preg_match_all('/\/wp-content\/uploads\/[^"\')\s,>]+/', $row['post_content'], $m);
+				if (!empty($m[0])) {
+					foreach ($m[0] as $u) {
+						$b = wp_basename(rtrim($u, '\\/.,;'));
+						if ($b && strpos($b, '.') !== false) {
+							$basenames[] = $b;
+						}
+					}
 				}
 			}
-		} else {
-			$module = 'Scan';
-			$error = 'post content data not set for scan';
-			$wmh_general = new wmh_general();
-			$wmh_general->fn_wmh_error_log($module, $error);
-		}
-		return $content;
+			$basenames = array_unique($basenames);
+			$offset += $chunk_size;
+		} while (count($rows) === $chunk_size);
+		return array_values($basenames);
 	}
 
-	/* check page content */
+	/* check page content — returns array of upload basenames found in page post_content rows */
 	public function fn_wmh_check_page_content()
 	{
-
-		$check_page_content_sql =  'SELECT ID, post_content FROM ' . $this->wp_posts . ' WHERE post_type = "page"';
-		$page_content_data =  $this->conn->get_results($check_page_content_sql, ARRAY_A);
-		$content = array();
-		if (isset($page_content_data) && !empty($page_content_data)) {
-			foreach ($page_content_data as $page_content) {
-				if ($page_content['post_content'] != '') {
-					$data = htmlentities($page_content['post_content']);
-					array_push($content, $data);
+		$basenames = [];
+		$chunk_size = 200;
+		$offset = 0;
+		do {
+			$sql = $this->conn->prepare(
+				'SELECT post_content FROM ' . $this->wp_posts . ' WHERE post_type = "page" AND post_content != "" LIMIT %d OFFSET %d',
+				$chunk_size, $offset
+			);
+			$rows = $this->conn->get_results($sql, ARRAY_A);
+			if (empty($rows)) break;
+			foreach ($rows as $row) {
+				preg_match_all('/\/wp-content\/uploads\/[^"\')\s,>]+/', $row['post_content'], $m);
+				if (!empty($m[0])) {
+					foreach ($m[0] as $u) {
+						$b = wp_basename(rtrim($u, '\\/.,;'));
+						if ($b && strpos($b, '.') !== false) {
+							$basenames[] = $b;
+						}
+					}
 				}
 			}
-		} else {
-			$module = 'Scan';
-			$error = 'page content data not set for scan';
-			$wmh_general = new wmh_general();
-			$wmh_general->fn_wmh_error_log($module, $error);
-		}
-		return $content;
+			$basenames = array_unique($basenames);
+			$offset += $chunk_size;
+		} while (count($rows) === $chunk_size);
+		return array_values($basenames);
 	}
 
 	public function fn_wmh_get_page_post_feature_images_ids()
@@ -1433,7 +1486,7 @@ class wmh_scan
 			wp_die(esc_html(__('Security check failed. Hacking attempt detected.', MEDIA_HYGIENE)));
 		}
 
-		if (isset($_POST['action']) && sanitize_text_field($_POST['action'] == 'blacklist_single_image_call')) {
+		if (isset($_POST['action']) && sanitize_text_field($_POST['action']) == 'blacklist_single_image_call') {
 
 			if (isset($_POST['post_id']) && $_POST['post_id'] != '') {
 
@@ -1501,53 +1554,35 @@ class wmh_scan
 			wp_die(esc_html(__('Security check failed. Hacking attempt detected.', MEDIA_HYGIENE)));
 		}
 
-		$list_element = '';
+		$attachment_cat_raw = isset($_POST['attachment_cat']) ? sanitize_text_field($_POST['attachment_cat']) : '';
+		$date_raw           = isset($_POST['date'])           ? sanitize_text_field($_POST['date'])           : '';
+		$list_element_raw   = isset($_POST['list_element'])   ? sanitize_text_field($_POST['list_element'])   : '';
 
-		if (sanitize_text_field($_POST['list_element']) == 'blacklist') {
+		$list_element = '';
+		if ($list_element_raw === 'blacklist') {
 			$list_element = '&type=blacklist';
-		} else if (sanitize_text_field($_POST['list_element']) == 'whitelist') {
+		} elseif ($list_element_raw === 'whitelist') {
 			$list_element = '&type=whitelist';
-		} else if (sanitize_text_field($_POST['list_element']) == 'trash') {
+		} elseif ($list_element_raw === 'trash') {
 			$list_element = '&type=trash';
 		}
 
-
-		if ($_POST['attachment_cat'] != '' && $_POST['date'] != '') {
-
+		if ($attachment_cat_raw !== '' && $date_raw !== '') {
 			$flg = 1;
-			$attachment_cat = sanitize_text_field($_POST['attachment_cat']);
-			$attachment_date = sanitize_text_field($_POST['date']);
-			$url = admin_url() . "admin.php?page=wmh-media-hygiene" . $list_element . "&attachment_cat=" . $attachment_cat . "&date=" . $attachment_date . "";
-			$output = array(
-				'flg' => $flg,
-				'url' => $url
-			);
-		} else if ($_POST['attachment_cat'] != '' && $_POST['date'] == '') {
-
+			$url = admin_url() . 'admin.php?page=wmh-media-hygiene' . $list_element . '&attachment_cat=' . $attachment_cat_raw . '&date=' . $date_raw;
+			$output = array( 'flg' => $flg, 'url' => $url );
+		} elseif ($attachment_cat_raw !== '' && $date_raw === '') {
 			$flg = 2;
-			$attachment_cat = sanitize_text_field($_POST['attachment_cat']);
-			$url = admin_url() . "admin.php?page=wmh-media-hygiene" . $list_element . "&attachment_cat=" . $attachment_cat . "";
-			$output = array(
-				'flg' => $flg,
-				'url' => $url
-			);
-		} else if ($_POST['attachment_cat'] == '' && $_POST['date'] != '') {
-
+			$url = admin_url() . 'admin.php?page=wmh-media-hygiene' . $list_element . '&attachment_cat=' . $attachment_cat_raw;
+			$output = array( 'flg' => $flg, 'url' => $url );
+		} elseif ($attachment_cat_raw === '' && $date_raw !== '') {
 			$flg = 3;
-			$attachment_date = sanitize_text_field($_POST['date']);
-			$url = admin_url() . "admin.php?page=wmh-media-hygiene" . $list_element . "&date=" . $attachment_date . "";
-			$output = array(
-				'flg' => $flg,
-				'url' => $url
-			);
-		} else if ($_POST['attachment_cat'] == '' && $_POST['date'] == '') {
-
+			$url = admin_url() . 'admin.php?page=wmh-media-hygiene' . $list_element . '&date=' . $date_raw;
+			$output = array( 'flg' => $flg, 'url' => $url );
+		} else {
 			$flg = 4;
-			$url = admin_url() . "admin.php?page=wmh-media-hygiene" . $list_element . "";
-			$output = array(
-				'flg' => $flg,
-				'url' => $url
-			);
+			$url = admin_url() . 'admin.php?page=wmh-media-hygiene' . $list_element;
+			$output = array( 'flg' => $flg, 'url' => $url );
 		}
 
 		echo json_encode($output);

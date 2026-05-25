@@ -197,6 +197,12 @@ class wmh_dashboard
             );
             echo json_encode($output);
             wp_die();
+        } else {
+            echo json_encode([
+                'flg'     => -1,
+                'message' => 'Scan statistics could not be retrieved — the scan may not have completed successfully. Please run the scan again.',
+            ]);
+            wp_die();
         }
     }
 

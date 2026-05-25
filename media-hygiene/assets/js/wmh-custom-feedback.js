@@ -3,20 +3,17 @@ jQuery(document).ready(function () {
         title: 'Media Hygiene - Help Us Improve',
         autoOpen: false,
         modal: true,
-        height: 390,
-        width: 650,
+        height: 500,
+        width: 660,
         draggable: false,
         resizable: false,
         create: function (event, ui) {
-            // Apply CSS to disable scrollbars
             jQuery(this).css('overflow', 'hidden');
         },
         open: function (event, ui) {
-            // Apply CSS to disable scrollbars
             jQuery(this).css('overflow', 'hidden');
         },
         close: function (event, ui) {
-            // Reset CSS after the modal is closed
             jQuery(this).css('overflow', 'auto');
         },
         buttons: [
@@ -25,8 +22,7 @@ jQuery(document).ready(function () {
                 class: "wmh-plugin-deactive-btn",
                 id: "wmh-skip-and-deactive",
                 click: function () {
-                    let processType = 1;
-                    doDeactiveProcess(processType);
+                    doDeactiveProcess(1);
                 }
             },
             {
@@ -34,80 +30,75 @@ jQuery(document).ready(function () {
                 class: "wmh-plugin-deactive-btn",
                 id: "wmh-deactive",
                 click: function () {
-                    let processType = 2;
-                    doDeactiveProcess(processType);
+                    doDeactiveProcess(2);
                 }
             },
         ]
     });
 });
 
-/* deactive button click */
+/* deactivate link click — open modal */
 jQuery(document).on('click', '#deactivate-media-hygiene', function (e) {
     e.preventDefault();
-    /* opem modal */
     jQuery('#wmh-feedback-modal').dialog('open');
-    /* by default isable deactivate button */
     jQuery('#wmh-deactive').button('option', 'disabled', true);
 });
 
-/* keypress in feedback text area */
-jQuery(document).on('keyup', '#wmh-text-deactivate', function (e) {
-    e.preventDefault();
-    let feedbackTextLength = jQuery(this).val();
-    if (feedbackTextLength) {
-        jQuery('#wmh-deactive').button('option', 'disabled', false);
-    } else {
-        jQuery('#wmh-deactive').button('option', 'disabled', true);
-    }
-});
-
+/* enable Deactivate button once a radio is selected */
 jQuery(document).on('change', '.wmh-feedback', function (e) {
     e.preventDefault();
-    let chekedVal = jQuery('input[name=wmh_feedback]:checked').val();
+    var chekedVal = jQuery('input[name=wmh_feedback]:checked').val();
     jQuery('#wmh-skip-and-deactive').attr('disabled', 'disabled');
     if (chekedVal == 8) {
         jQuery('#wmh-text-deactivate').css('display', 'block');
-        jQuery("#wmh-feedback-modal").dialog("option", "height", 500);
-        let feedbackTextLength = jQuery("#wmh-text-deactivate").val();
-        if (feedbackTextLength) {
-            jQuery('#wmh-deactive').button('option', 'disabled', false);
-        } else {
-            jQuery('#wmh-deactive').button('option', 'disabled', true);
-        }
+        jQuery('#wmh-feedback-modal').dialog('option', 'height', 600);
+        var feedbackTextLength = jQuery('#wmh-text-deactivate').val();
+        jQuery('#wmh-deactive').button('option', 'disabled', feedbackTextLength ? false : true);
     } else {
         jQuery('#wmh-text-deactivate').css('display', 'none');
-        jQuery("#wmh-feedback-modal").dialog("option", "height", 390);
+        jQuery('#wmh-feedback-modal').dialog('option', 'height', 500);
         jQuery('#wmh-deactive').button('option', 'disabled', false);
     }
 });
 
-function doDeactiveProcess(processType = '') {
+/* enable Deactivate button when "Other" text has content */
+jQuery(document).on('keyup', '#wmh-text-deactivate', function () {
+    jQuery('#wmh-deactive').button('option', 'disabled', jQuery(this).val() ? false : true);
+});
 
-    var feedbackText = '';
-    let chekedVal = jQuery('input[name=wmh_feedback]:checked').val()
-    if (chekedVal == 8) {
-        var feedbackText = jQuery('#wmh-text-deactivate').val();
-    }
+function doDeactiveProcess(processType) {
+    var chekedVal    = jQuery('input[name=wmh_feedback]:checked').val() || '';
+    var feedbackText = (chekedVal == 8) ? jQuery('#wmh-text-deactivate').val() : '';
+
+    jQuery('#wmh-skip-and-deactive, #wmh-deactive').button('option', 'disabled', true);
+    jQuery('.wmh-deactive-loader-div').css('display', 'block');
+
     jQuery.ajax({
-        type: "POST",
+        type: 'POST',
         url: wmhFeedbackObj.ajaxurl,
         data: {
-            action: 'wmh_customer_feedback',
-            checked_val: chekedVal,
+            action:        'wmh_customer_feedback',
+            checked_val:   chekedVal,
             feedback_text: feedbackText,
-            process_type: processType,
+            process_type:  processType,
             share_contact: jQuery('#wmh-share-contact').is(':checked') ? '1' : '0',
-            nonce: wmhFeedbackObj.nonce
+            nonce:         wmhFeedbackObj.nonce
         },
-        beforeSend: function () {
-            jQuery('.wmh-deactive-loader-div').css('display', 'block');
-        },
-        success: function (res) {
-            var res = JSON.parse(res);
-            alert(res.msg);
+        success: function (raw) {
+            var res;
+            try {
+                res = JSON.parse(raw);
+            } catch (e) {
+                jQuery('.wmh-deactive-loader-div').css('display', 'none');
+                location.reload();
+                return;
+            }
             jQuery('.wmh-deactive-loader-div').css('display', 'none');
             location.reload();
         },
+        error: function () {
+            jQuery('.wmh-deactive-loader-div').css('display', 'none');
+            location.reload();
+        }
     });
 }

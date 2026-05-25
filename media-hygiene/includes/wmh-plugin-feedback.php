@@ -2,105 +2,91 @@
 
 defined('ABSPATH') or die('Plugin file cannot be accessed directly.');
 
+/* Endpoint on mediahygiene.com that receives deactivation payloads. */
+if (!defined('WMH_FEEDBACK_ENDPOINT')) {
+    define('WMH_FEEDBACK_ENDPOINT', 'https://mediahygiene.com/wp-json/wmh/v1/deactivation');
+}
+
 class wmh_plugin_feedback
 {
-
     public function __construct()
     {
-        /* feedback call or deactive */
         add_action('wp_ajax_wmh_customer_feedback', array($this, 'fn_wmh_customer_feedback'));
     }
 
     public function fn_wmh_customer_feedback()
-    {   
+    {
         if (!current_user_can('manage_options')) {
-			wp_send_json_error(null, 403);
-		}
-        
-        /* default */
-        $flg = 0;
-        $msg = __('Something is wrong', MEDIA_HYGIENE);
+            wp_send_json_error(null, 403);
+        }
 
-        /* check nonce here. */
-        $wp_nonce = sanitize_text_field($_POST['nonce']);
-        if (!wp_verify_nonce($wp_nonce, 'wmh_customer_feedback')) {
+        if (!isset($_POST['nonce']) || !wp_verify_nonce(sanitize_text_field($_POST['nonce']), 'wmh_customer_feedback')) {
             wp_die(esc_html__('Security check. Hacking not allowed', MEDIA_HYGIENE), '', array('response' => 403));
         }
 
-        $process_type = '';
-        if (isset($_POST['process_type']) && $_POST['process_type'] != '') {
-            $process_type = sanitize_text_field($_POST['process_type']);
-        }
+        $process_type  = isset($_POST['process_type'])  ? (int) $_POST['process_type']                    : 0;
+        $checked_val   = isset($_POST['checked_val'])   ? (int) $_POST['checked_val']                     : 0;
+        $feedback_text = isset($_POST['feedback_text']) ? sanitize_textarea_field($_POST['feedback_text']) : '';
+        $share_contact = isset($_POST['share_contact']) && sanitize_text_field($_POST['share_contact']) === '1';
 
-        $feedback_text = '';
-        if (isset($_POST['feedback_text']) && $_POST['feedback_text'] != '') {
-            $feedback_text = sanitize_textarea_field($_POST['feedback_text']);
-        }
+        /* deactivate regardless of whether feedback was submitted */
+        deactivate_plugins('media-hygiene/media-hygiene.php');
 
-        $cheked_val = '';
-        if (isset($_POST['checked_val']) && $_POST['checked_val'] != '') {
-            $cheked_val = sanitize_textarea_field($_POST['checked_val']);
-        }
+        /* only send when user submitted a reason — not Skip & Deactivate */
+        if ($process_type === 2 && $checked_val >= 1 && $checked_val <= 8) {
 
-        /* process of deactivate plugin */
-        $plugin_key = 'media-hygiene/media-hygiene.php';
-        deactivate_plugins($plugin_key);
+            $reason_map = array(
+                1 => 'The plugin is not working as expected',
+                2 => 'I found a better plugin',
+                3 => 'It is not what I was looking for',
+                4 => 'The plugin is not working',
+                5 => 'I could not understand how to use it',
+                6 => 'The plugin is great, but I need a specific feature that you do not support',
+                7 => 'It is a temporary deactivation - I am troubleshooting in the issue',
+                8 => 'Other',
+            );
 
-        if ($process_type != '' && $process_type == 2) {
-            $body = '';
-            if ($cheked_val == 1) {
-                $body = __('The plugin is not working as expected', MEDIA_HYGIENE);
-            } else if ($cheked_val == 2) {
-                $body = __('I found a better plugin', MEDIA_HYGIENE);
-            } else if ($cheked_val == 3) {
-                $body = __('It is not what I was looking for', MEDIA_HYGIENE);
-            } else if ($cheked_val == 4) {
-                $body = __('The plugin is not working', MEDIA_HYGIENE);
-            } else if ($cheked_val == 5) {
-                $body = __('I could not understand how to use it', MEDIA_HYGIENE);
-            } else if ($cheked_val == 6) {
-                $body = __('The plugin is great, but I need a specific feature that you do not support', MEDIA_HYGIENE);
-            } else if ($cheked_val == 7) {
-                $body = __('It is a temporary deactivation - I am troubleshooting in the issue', MEDIA_HYGIENE);
-            } else if ($cheked_val == 8 && $feedback_text != '') {
-                $body = $feedback_text;
+            $reason_text = $reason_map[$checked_val];
+            if ($checked_val === 8 && $feedback_text !== '') {
+                $reason_text = $feedback_text;
             }
 
-            /* only include personal data when the user explicitly opted in */
-            $share_contact = isset($_POST['share_contact']) && sanitize_text_field($_POST['share_contact']) === '1';
+            /* Tier 1 — non-PII technical context, always sent */
+            $payload = array(
+                'plugin'      => 'free',
+                'plugin_ver'  => MH_FILE_VERSION,
+                'wp_ver'      => get_bloginfo('version'),
+                'php_ver'     => PHP_VERSION,
+                'reason_id'   => $checked_val,
+                'reason_text' => $reason_text,
+                'scan_done'   => (int) (bool) get_option('wmh_scan_status'),
+            );
 
-            $display_name = '';
-            $user_email   = '';
-            $site_url     = site_url();
-
+            /* Tier 2 — PII, only with explicit consent */
             if ($share_contact) {
-                $user         = wp_get_current_user();
-                $user_email   = $user->data->user_email;
-                $display_name = $user->data->display_name;
+                $user = wp_get_current_user();
+                $payload['user_name']  = sanitize_text_field($user->data->display_name);
+                $payload['user_email'] = sanitize_email($user->data->user_email);
+                $payload['site_url']   = esc_url_raw(site_url());
             }
 
-            /* send email */
-            $to      = array('support@mediahygiene.com');
-            $subject = 'Media Hygiene Free Version Deactivated - ' . date('Y-m-d h:i:s');
-            $message = '<div>';
-            if ($share_contact) {
-                $message .= '<p><b>Display Name: </b>' . esc_html($display_name) . '</p>';
-                $message .= '<p><b>User email: </b>' . esc_html($user_email) . '</p>';
-                $message .= '<p><b>Site url: </b>' . esc_url($site_url) . '</p>';
-            }
-            $message .= '<p><b>Reason: </b>' . esc_html($body) . '</p>';
-            $message .= '</div>';
-            $headers = array('Content-Type: text/html; charset=UTF-8');
-            wp_mail($to, $subject, $message, $headers);
+            /*
+             * Non-blocking: fire-and-forget so the deactivation response
+             * returns to the user immediately without waiting on mediahygiene.com.
+             */
+            wp_remote_post(WMH_FEEDBACK_ENDPOINT, array(
+                'timeout'     => 8,
+                'blocking'    => false,
+                'headers'     => array('Content-Type' => 'application/json; charset=utf-8'),
+                'body'        => wp_json_encode($payload),
+                'data_format' => 'body',
+            ));
         }
 
-        $flg = 1;
-        $msg = __('Media Hygiene is deactivated.', MEDIA_HYGIENE);
-        $output = array(
-            'flg' => $flg,
-            'msg' => $msg
-        );
-        echo json_encode($output);
+        echo wp_json_encode(array(
+            'flg' => 1,
+            'msg' => __('Media Hygiene is deactivated.', MEDIA_HYGIENE),
+        ));
         wp_die();
     }
 }

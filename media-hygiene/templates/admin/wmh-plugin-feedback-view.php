@@ -35,14 +35,23 @@
             <?php _e('Other', MEDIA_HYGIENE); ?>
         </li>
     </ul>
-    <textarea rows="5" cols="90" id="wmh-text-deactivate" placeholder="Enter your feedback" style="display:none"></textarea>
+    <textarea rows="4" cols="90" id="wmh-text-deactivate" placeholder="<?php esc_attr_e('Tell us more...', MEDIA_HYGIENE); ?>" style="display:none; margin-top:8px;"></textarea>
+
+    <div style="margin-top:14px; padding:10px 12px; background:#f9f9f9; border-left:3px solid #ddd; font-size:12px; color:#555; line-height:1.6;">
+        <strong><?php _e('What will be sent to mediahygiene.com:', MEDIA_HYGIENE); ?></strong><br>
+        <?php _e('Plugin version &nbsp;&bull;&nbsp; WordPress version &nbsp;&bull;&nbsp; PHP version &nbsp;&bull;&nbsp; Your selected reason &nbsp;&bull;&nbsp; Whether you completed a scan', MEDIA_HYGIENE); ?>
+        <br><?php _e('No personal data is included unless you check the box below.', MEDIA_HYGIENE); ?>
+        &nbsp;<a href="https://mediahygiene.com/privacy-policy/" target="_blank" rel="noopener noreferrer"><?php _e('Privacy Policy', MEDIA_HYGIENE); ?></a>
+    </div>
+
     <p style="margin-top:10px;">
         <label>
-            <input type="checkbox" id="wmh-share-contact" value="1" />
-            <?php _e('Include my name, email address, and site URL in the feedback (optional)', MEDIA_HYGIENE); ?>
+            <input type="checkbox" id="wmh-share-contact" value="1" checked="checked" />
+            <?php _e('Also share my name, email, and site URL so you can follow up if needed', MEDIA_HYGIENE); ?>
         </label>
     </p>
-    <div class="wmh-deactive-loader-div" style="display: none;">
-        <?php _e('Loading ...', MEDIA_HYGIENE); ?>
+
+    <div class="wmh-deactive-loader-div" style="display: none; margin-top:8px;">
+        <?php _e('Processing...', MEDIA_HYGIENE); ?>
     </div>
 </div>

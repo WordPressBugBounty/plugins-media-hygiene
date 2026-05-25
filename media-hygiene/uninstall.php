@@ -47,6 +47,9 @@ if (isset($wmh_scan_option_data) && !empty($wmh_scan_option_data) && $wmh_scan_o
         $wmh_save_scan_content = $wpdb->prefix . 'wmh_save_scan_content';
         $wpdb->query("DROP TABLE IF EXISTS " . $wmh_save_scan_content);
 
+        /* drop wmh_scan_known_used — dashboard scan known-used index table */
+        $wpdb->query("DROP TABLE IF EXISTS " . $wpdb->prefix . 'wmh_scan_known_used');
+
         /* remove from option */
         delete_option('wmh_scan_option_data');
         delete_option('wmh_exclude_file_type');

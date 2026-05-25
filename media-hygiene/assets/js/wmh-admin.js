@@ -133,7 +133,7 @@ function fnWmhScanAttachment(data) {
             var data;
             try { data = JSON.parse(raw); } catch (e) {
                 console.error('[Media Hygiene] Scan step 1 raw response:', raw);
-                fnWmhScanError('Scan error (step 1): unexpected server response. Please check the server error log.');
+                fnWmhScanError('Scan error (step 1/4): the server returned an unexpected response. This is usually caused by a PHP fatal error or a plugin printing output. Enable WP_DEBUG_LOG and check your server error log.');
                 return;
             }
             var ajax_call = data.ajax_call;
@@ -160,7 +160,10 @@ function fnWmhScanAttachment(data) {
             }
         },
         error: function (xhr, status, error) {
-            fnWmhScanError('Scan connection error (step 1).\nStatus: ' + status + '\n' + error);
+            var msg = status === 'timeout'
+                ? 'The scan timed out (step 1/4). Your server\'s PHP max_execution_time may be too low — increase it in php.ini or contact your hosting provider.'
+                : 'Scan connection error (step 1/4) — ' + status + (error ? ': ' + error : '') + '. Please try again or check the server error log.';
+            fnWmhScanError(msg);
         }
     });
 }
@@ -188,7 +191,7 @@ function fnFetchDataFromDatabase(fetchDataAjaxCall = '', fetchDataProgressBar = 
             var res;
             try { res = JSON.parse(raw); } catch (e) {
                 console.error('[Media Hygiene] Scan step 2 raw response:', raw);
-                fnWmhScanError('Scan error (step 2): unexpected server response. Please check the server error log.');
+                fnWmhScanError('Scan error (step 2/4): the server returned an unexpected response. This is usually caused by a PHP fatal error or a plugin printing output. Enable WP_DEBUG_LOG and check your server error log.');
                 return;
             }
             var ajax_call = res.ajax_call;
@@ -211,11 +214,14 @@ function fnFetchDataFromDatabase(fetchDataAjaxCall = '', fetchDataProgressBar = 
             } else if (res.flg == 3) {
                 fnSpecialProcessForElementor(ajax_call, 0, progress_bar_width);
             } else {
-                fnWmhScanError(res.message || 'Unknown state in step 2.');
+                fnWmhScanError(res.error || res.message || 'Scan failed at the index-building step (step 2/4). Please try again.');
             }
         },
         error: function (xhr, status, error) {
-            fnWmhScanError('Scan connection error (step 2).\nStatus: ' + status + '\n' + error);
+            var msg = status === 'timeout'
+                ? 'The scan timed out (step 2/4). Your server\'s PHP max_execution_time may be too low — increase it in php.ini or contact your hosting provider.'
+                : 'Scan connection error (step 2/4) — ' + status + (error ? ': ' + error : '') + '. Please try again or check the server error log.';
+            fnWmhScanError(msg);
         }
     });
 
@@ -237,7 +243,7 @@ function fnSpecialProcessForElementor(ajax_call = '', elementor_ajax_call = '', 
             var res;
             try { res = JSON.parse(raw); } catch (e) {
                 console.error('[Media Hygiene] Scan Elementor step raw response:', raw);
-                fnWmhScanError('Scan error (Elementor step): unexpected server response. Please check the server error log.');
+                fnWmhScanError('Scan error (Elementor/step 2/4): the server returned an unexpected response. This is usually caused by a PHP fatal error or a plugin printing output. Enable WP_DEBUG_LOG and check your server error log.');
                 return;
             }
             if (res.progress_bar_width <= 100) {
@@ -254,7 +260,10 @@ function fnSpecialProcessForElementor(ajax_call = '', elementor_ajax_call = '', 
             }
         },
         error: function (xhr, status, error) {
-            fnWmhScanError('Scan connection error (Elementor step).\nStatus: ' + status + '\n' + error);
+            var msg = status === 'timeout'
+                ? 'The scan timed out (Elementor/step 2/4). Your server\'s PHP max_execution_time may be too low — increase it in php.ini or contact your hosting provider.'
+                : 'Scan connection error (Elementor/step 2/4) — ' + status + (error ? ': ' + error : '') + '. Please try again or check the server error log.';
+            fnWmhScanError(msg);
         }
     });
 }
@@ -280,7 +289,7 @@ function fnScanningDataAjaxCall(scanningDataAjaxCall = '', progressBar = '') {
             var res;
             try { res = JSON.parse(raw); } catch (e) {
                 console.error('[Media Hygiene] Scan step 3 raw response:', raw);
-                fnWmhScanError('Scan error (step 3): unexpected server response. Please check the server error log.');
+                fnWmhScanError('Scan error (step 3/4): the server returned an unexpected response. This is usually caused by a PHP fatal error or a plugin printing output. Enable WP_DEBUG_LOG and check your server error log.');
                 return;
             }
             var ajax_call = res.ajax_call;
@@ -305,7 +314,10 @@ function fnScanningDataAjaxCall(scanningDataAjaxCall = '', progressBar = '') {
             }
         },
         error: function (xhr, status, error) {
-            fnWmhScanError('Scan connection error (step 3).\nStatus: ' + status + '\n' + error);
+            var msg = status === 'timeout'
+                ? 'The scan timed out (step 3/4). Your server\'s PHP max_execution_time may be too low — increase it in php.ini or contact your hosting provider.'
+                : 'Scan connection error (step 3/4) — ' + status + (error ? ': ' + error : '') + '. Please try again or check the server error log.';
+            fnWmhScanError(msg);
         }
     });
 }
@@ -329,7 +341,7 @@ function fnFetchStatisticsData(statisticsAjaxCall = '') {
             var res;
             try { res = JSON.parse(raw); } catch (e) {
                 console.error('[Media Hygiene] Scan step 4 raw response:', raw);
-                fnWmhScanError('Scan error (step 4): unexpected server response. Please check the server error log.');
+                fnWmhScanError('Scan error (step 4/4): the server returned an unexpected response. This is usually caused by a PHP fatal error or a plugin printing output. Enable WP_DEBUG_LOG and check your server error log.');
                 return;
             }
             var ajax_call = res.ajax_call;
@@ -351,7 +363,10 @@ function fnFetchStatisticsData(statisticsAjaxCall = '') {
             }
         },
         error: function (xhr, status, error) {
-            fnWmhScanError('Scan connection error (step 4).\nStatus: ' + status + '\n' + error);
+            var msg = status === 'timeout'
+                ? 'The scan timed out (step 4/4). Your server\'s PHP max_execution_time may be too low — increase it in php.ini or contact your hosting provider.'
+                : 'Scan connection error (step 4/4) — ' + status + (error ? ': ' + error : '') + '. Please try again or check the server error log.';
+            fnWmhScanError(msg);
         }
     });
 }
@@ -414,8 +429,12 @@ function fn_wmh_restore_single_image(post_id = '', file_size = '') {
         beforeSend: function () {
             jQuery('.restore-loader-' + post_id + '').css('display', 'inline-block');
         },
-        success: function (data) {
-            var data = JSON.parse(data);
+        success: function (raw) {
+            var data;
+            try { data = JSON.parse(raw); } catch (e) {
+                alert('Unexpected server response during restore. Please check the error log.\n\n' + raw.substring(0, 400));
+                return;
+            }
             alert(data.message);
             if (data.flg == '1') {
                 location.reload();
@@ -441,24 +460,23 @@ function fn_wmh_whitelist_single_image(post_id) {
         beforeSend: function () {
             jQuery('.whitelist-loader-' + post_id + '').css('display', 'inline-block');
         },
-        success: function (data) {
-            var data = JSON.parse(data);
+        success: function (raw) {
+            var data;
+            try { data = JSON.parse(raw); } catch (e) {
+                alert('Unexpected server response. Please check the error log.\n\n' + raw.substring(0, 400));
+                return;
+            }
             if (data.flg == '1') {
                 jQuery('.notice-scan').css('display', 'block');
                 jQuery('.notice-scan').addClass('notice-success');
                 jQuery('.notice-scan p').text(data.message);
-                setTimeout(function () {
-                    location.reload();
-                }, 1000);
+                setTimeout(function () { location.reload(); }, 1000);
             } else if (data.flg == '0') {
                 jQuery('.notice-scan').css('display', 'block');
                 jQuery('.notice-scan').addClass('notice-error');
                 jQuery('.notice-scan p').text(data.message);
-                setTimeout(function () {
-                    location.reload();
-                }, 1000);
+                setTimeout(function () { location.reload(); }, 1000);
             }
-
         },
         complete: function (data) {
             jQuery('.whitelist-loader-' + post_id + '').css('display', 'none');
@@ -481,22 +499,22 @@ function fn_wmh_blacklist_single_image(post_id) {
         beforeSend: function () {
             jQuery('.blacklist-loader-' + post_id + '').css('display', 'inline-block');
         },
-        success: function (data) {
-            var data = JSON.parse(data);
+        success: function (raw) {
+            var data;
+            try { data = JSON.parse(raw); } catch (e) {
+                alert('Unexpected server response. Please check the error log.\n\n' + raw.substring(0, 400));
+                return;
+            }
             if (data.flg == '1') {
                 jQuery('.notice-scan').css('display', 'block');
                 jQuery('.notice-scan').addClass('notice-success');
                 jQuery('.notice-scan p').text(data.message);
-                setTimeout(function () {
-                    location.reload();
-                }, 1000);
+                setTimeout(function () { location.reload(); }, 1000);
             } else if (data.flg == '0') {
                 jQuery('.notice-scan').css('display', 'block');
                 jQuery('.notice-scan').addClass('notice-error');
                 jQuery('.notice-scan p').text(data.message);
-                setTimeout(function () {
-                    location.reload();
-                }, 1000);
+                setTimeout(function () { location.reload(); }, 1000);
             }
         },
         complete: function (data) {

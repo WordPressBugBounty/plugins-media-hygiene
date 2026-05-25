@@ -13,6 +13,7 @@ class wmh_general
 	public $wmh_deleted_media;
 	public $wmh_used_media_post_id;
 	public $wmh_save_scan_content;
+	public $wmh_scan_known_used;
 
 	public function __construct()
 	{
@@ -25,6 +26,7 @@ class wmh_general
 		$this->wmh_deleted_media = $this->conn->prefix . MH_PREFIX . 'deleted_media';
 		$this->wmh_used_media_post_id = $this->conn->prefix . MH_PREFIX . 'used_media_post_id';
 		$this->wmh_save_scan_content = $this->conn->prefix . MH_PREFIX . 'save_scan_content';
+		$this->wmh_scan_known_used = $this->conn->prefix . MH_PREFIX . 'scan_known_used';
 		/* add admin menu hook */
 		add_action('admin_menu', array($this, 'fn_add_menu_to_admin'));
 		/* add Go Pro link in plugin list row action */
@@ -358,6 +360,18 @@ class wmh_general
 			`date_updated` datetime NOT NULL,
 			PRIMARY KEY (`id`));";
 		dbDelta($wmh_save_scan_content_sql);
+
+		/* Known-used index for the dashboard scan.
+		 * Built in Step 2 call 12 from all collected plugin/content data.
+		 * Step 3 queries this table per attachment batch instead of loading all PHP arrays. */
+		$wmh_scan_known_used_sql = "CREATE TABLE IF NOT EXISTS " . $this->wmh_scan_known_used . "(
+			`id` int NOT NULL AUTO_INCREMENT,
+			`post_id` int NULL,
+			`basename` varchar(255) NULL,
+			PRIMARY KEY (`id`),
+			KEY `idx_post_id` (`post_id`),
+			KEY `idx_basename` (`basename`(191)));";
+		dbDelta($wmh_scan_known_used_sql);
 
 		/* make array for store scan option data to WORDPRESS option. */
 		$wmh_scan_option_data = array(

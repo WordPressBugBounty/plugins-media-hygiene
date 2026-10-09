@@ -1,5 +1,8 @@
 <?php
 
+defined('ABSPATH') or die('Plugin file cannot be accessed directly.');
+
+
 if (file_exists(MH_FILE_PATH . '/templates/admin/wmh-header-view.php')) {
     $wmh_general= new wmh_general();
     $wmh_general->fn_wmh_get_template('wmh-header-view.php');
@@ -23,7 +26,7 @@ $deleted_media_result = $wpdb->get_results($deleted_media_sql, ARRAY_A);
                         <form id="deleted-media-list-form">
                             <input type="hidden" name="action" value="deleted_media_list_action">
                             <input type="hidden" name="nonce" value="<?php echo esc_attr(wp_create_nonce('deleted_media_list_nonce')); ?>">
-                            <button class="button button-primary wmh-btn" id="deleted-list-btn"><i class="fa-solid fa-spinner fa-spin deleted-list-btn-loader" style="display:none;"></i>&nbsp;<?php _e('Clear list'); ?></button>
+                            <button class="button button-primary wmh-btn" id="deleted-list-btn"><i class="fa-solid fa-spinner fa-spin deleted-list-btn-loader" style="display:none;"></i>&nbsp;<?php _e('Clear list', MEDIA_HYGIENE); ?></button>
                         </form>
                     </div>
                 <?php } ?>

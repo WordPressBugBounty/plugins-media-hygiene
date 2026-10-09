@@ -1,5 +1,8 @@
 <?php
 
+defined('ABSPATH') or die('Plugin file cannot be accessed directly.');
+
+
 global $wpdb;
 $filter_date = '';
 $list_element = '';

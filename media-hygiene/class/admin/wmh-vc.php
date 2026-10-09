@@ -29,7 +29,14 @@ class wmh_vc
                 if ($results['post_id'] != '') {
                     $post_id = $results['post_id'];
                     if ($post_id) {
-                        $vc_post_content_sql = 'SELECT post_content FROM ' . $this->wp_posts . ' WHERE ID = "' . $post_id . '" AND ( post_type = "page" OR post_type = "post" )';
+                        $vc_post_content_sql = $this->conn->prepare(
+                            /* no post_type filter: the vcv-be-editor key already proves
+                             * this row was built with Visual Composer, and restricting
+                             * to page/post missed custom post types, which marked media
+                             * that is genuinely in use as unused */
+                            'SELECT post_content FROM ' . $this->wp_posts . ' WHERE ID = %d AND post_type != "revision"',
+                            (int) $post_id
+                        );
                         $vc_post_content_result = $this->conn->get_results($vc_post_content_sql, ARRAY_A);
                         if (isset($vc_post_content_result) && !empty($vc_post_content_result)) {
                             foreach ($vc_post_content_result as $content) {

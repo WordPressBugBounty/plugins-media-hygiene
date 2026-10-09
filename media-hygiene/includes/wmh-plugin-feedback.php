@@ -32,8 +32,19 @@ class wmh_plugin_feedback
         /* deactivate regardless of whether feedback was submitted */
         deactivate_plugins('media-hygiene/media-hygiene.php');
 
-        /* only send when user submitted a reason — not Skip & Deactivate */
-        if ($process_type === 2 && $checked_val >= 1 && $checked_val <= 8) {
+        /* Send when the user pressed Deactivate and gave us SOMETHING:
+         * a reason, a comment, or both. Skip & Deactivate (process type 1)
+         * still sends nothing at all.
+         *
+         * The reason used to be required. Observed on a real deactivation:
+         * someone typed a comment and ticked the consent box but picked no
+         * radio, and all of it was discarded. A written comment is the most
+         * useful thing on this form, so refusing it unless it is also
+         * categorised throws away the best feedback we get. */
+        $wmh_has_reason  = ($checked_val >= 1 && $checked_val <= 8);
+        $wmh_has_comment = ($feedback_text !== '');
+
+        if ($process_type === 2 && ($wmh_has_reason || $wmh_has_comment)) {
 
             $reason_map = array(
                 1 => 'The plugin is not working as expected',
@@ -46,12 +57,20 @@ class wmh_plugin_feedback
                 8 => 'Other',
             );
 
-            $reason_text = $reason_map[$checked_val];
-            if ($checked_val === 8 && $feedback_text !== '') {
-                $reason_text = $feedback_text;
-            }
+            /* Keep the picked reason intact. It used to be replaced by the
+             * user's free text on "Other", which is why the reason totals on
+             * the server were polluted with one-off strings and junk input
+             * instead of grouping under Other. The comment now travels in its
+             * own field, for every reason, not just Other. */
+            /* No reason picked is a real state now, so do not index the map
+             * with a 0. Say plainly that the reason was not given rather
+             * than inventing one or sending an empty string, so the
+             * dashboard can tell 'did not say' apart from a real answer. */
+            $reason_text = $wmh_has_reason
+                ? $reason_map[$checked_val]
+                : 'No reason selected';
 
-            /* Tier 1 — non-PII technical context, always sent */
+            /* Tier 1, non-PII technical context, always sent */
             $payload = array(
                 'plugin'      => 'free',
                 'plugin_ver'  => MH_FILE_VERSION,
@@ -59,10 +78,11 @@ class wmh_plugin_feedback
                 'php_ver'     => PHP_VERSION,
                 'reason_id'   => $checked_val,
                 'reason_text' => $reason_text,
+                'comment'     => $feedback_text,
                 'scan_done'   => (int) (bool) get_option('wmh_scan_status'),
             );
 
-            /* Tier 2 — PII, only with explicit consent */
+            /* Tier 2, PII, only with explicit consent */
             if ($share_contact) {
                 $user = wp_get_current_user();
                 $payload['user_name']  = sanitize_text_field($user->data->display_name);

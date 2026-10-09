@@ -1,31 +1,34 @@
 === Media Hygiene: Remove or Delete Unused Images and More! ===
-Author URI: https://www.mediahygiene.com/
-Plugin URI: https://wordpress.org/plugins/media-hygiene/
-Description: The Media Hygiene plugin removes unused media from the WordPress library to free up space, reduce clutter, and improve server performance. With features like bulk delete and deep folder scanning, it's a must-have for finding and deleting unused images and media.
 Contributors: slui
-Tags: unused media, clean, delete, remove, images
+Tags: unused media, delete unused images, media library, media cleanup, unused images
 Requires at least: 5.3
+Tested up to: 7.1.3
 Requires PHP: 8.0
-Tested up to: 7.0.0
-Stable tag: 6.0.0
-License: Custom
-License URI: Custom license, no Distribution allowed
+Stable tag: 6.1.0
+License: GPLv2 or later
+License URI: https://www.gnu.org/licenses/gpl-2.0.html
+
+Find and delete unused images in your WordPress media library, free up hosting space, and keep your backups small.
 
 == Description ==
 
-The Media Hygiene plugin removes unused media from the WordPress library to free up space, reduce clutter, and improve server performance. With features like bulk delete and deep folder scanning, it's a must-have for finding and deleting unused images and media.
+Old logos. Images from last year's redesign. Uploads you tried once and forgot about. A WordPress media library keeps growing long after you have stopped using some of what is in it.
 
-== Introducing Media Hygiene  ==
+Media Hygiene finds the files worth a second look. Scan your library, review what appears unused, and decide what stays. Clearing out what you no longer need reclaims storage and makes every future backup smaller.
 
-Introducing the Media Hygiene plugin - the ideal solution for optimizing your WordPress media library! With this powerful plugin, you can quickly and easily remove all unused images, reducing clutter, and freeing up valuable server space. This plugin is a must-have for anyone looking to delete unused images in WordPress or remove unused images from the media library.
+It suits blogs, business sites and client work. Start small, or filter a large library down into groups you can actually work through. No coding needed.
 
-Media Hygiene is fully compatible with major WordPress builders, including plugins like WooCommerce, custom fields and posts plugin, sliders, SEO, and more - making it versatile and convenient for all types of WordPress users. Unique features like "One shot delete" and "One-shot download" allow you to bulk delete media and download all images from the Wordpress media library make it easy to keep your media library organized and up-to-date.
+### How it works
 
-Making offsite backups? Reduce the time and cost of disk space with a smaller backup file size. 
+1. Scan your library. The plugin looks for references to your images, documents, audio and video across the content sources it supports.
 
-Say goodbye to a cluttered and disorganized WordPress media library, and hello to a cleaner, more efficient WordPress site! Whether you're an agency, blogger, photographer, or business owner, Media Hygiene is the perfect tool for keeping your media library in tip-top shape. 
+2. Review the results. You get names, URLs and sizes, so you can open a file or copy its address and check for yourself.
 
-Get it now and keep your WordPress site super clean!
+3. Keep what matters. Add anything you want to protect to the whitelist and it stays out of every future scan.
+
+4. Finish when you are ready. Move files to Trash, restore them if you change your mind, or delete them permanently.
+
+You stay in control throughout. Nothing is deleted unless you select it and confirm. An unused result means no reference was found in the places the plugin reads, which is why the review step matters. Keep a backup before you delete anything.
 
 ### Some use cases for website owners
 
@@ -63,13 +66,17 @@ Get it now and keep your WordPress site super clean!
 
 - Dashboard - shows list of all unused media by occupied space and by type.
 
-- Notifications - get email notifications when new files have been uploaded and not scanned on a specific schedule (daily, weekly, bi-weekly, monthly, quarterly)
+- Notifications - a summary email when new files have been uploaded since your last scan. Monthly by default, and you can change it to daily, weekly, bi-weekly or quarterly, or switch it off, in Settings.
 
-- Site builder compatibility - works with all major site builders such as Elementor (see list below).
+- Site builder compatibility - detects media placed with Gutenberg, Elementor, Divi, Bricks, Visual Composer and OceanWP on pages and posts, plus sliders built with LayerSlider (see list below).
 
 - Whitelist - keep files safe from deletion. Perfect for files linked to from off-site sources.
 
-- Filtering - files by name and date.
+- Filtering - files by name, by year and month, and by category: images, video, audio, documents or others.
+
+- Page size - show between 1 and 200 results at a time. The default is 10.
+
+- Exclude file types - leave chosen extensions out of the scan in Settings. Font files and CSS are excluded already.
 
 - Backup - download unused media file individually or by page.
 
@@ -80,87 +87,84 @@ Get it now and keep your WordPress site super clean!
 - Support - only through WordPress repository.
 
 ### Changelog ###
-**[Check latest here](https://mediahygiene.com/changelog/)**
+Full version history is at the bottom of this page, and also at **[mediahygiene.com/changelog](https://mediahygiene.com/changelog/)**.
 
 
-### **[Compatibility](https://mediahygiene.com/compatibilities/)** 
+### **[Compatibility](https://mediahygiene.com/compatibilities/)**
 
-Please check our website to see a completely list of compatible plugins/themes.
+Please check our website to see a complete list of compatible plugins/themes.
 
-- Gutenberg - Standard
+Detected by the free version, on pages and posts:
 
-- Elementor Basic - Standard
+- Gutenberg
+
+- Elementor (builder)
 
 - Bricks (builder)
 
 - Divi (builder)
 
-- WP Bakery Page Builder (builder)
-
-- Beaver Builder (builder)
-
 - Visual Composer (builder)
 
-- Avada (theme)
+- OceanWP (theme)
 
-- Enfold (theme)
+- LayerSlider (slider plugin, bundled with the Enfold theme)
 
-- Flatsome (theme)
+Pro adds the same builders in templates, theme options, headers, footers and custom post types, plus WP Bakery, Beaver Builder, Avada and Flatsome, and media stored by WooCommerce, ACF, Pods, Custom Field Suite, the SEO plugins and the slider plugins.
 
 * More to come...
 
 
-### **[Pro](https://mediahygiene.com)** (available now)
+### What it reads, and what it does not
 
-- Customer Support - directly from the plugin - Pro
+We would rather tell you this up front than have you find out after deleting something.
 
-- Faster scanning through the use of WP-CLI (Wordpress command line interface)
+The free version finds media by reading your posts and pages, including the page builders listed above, your Site Editor templates, your widgets and your site logo.
 
-- Unique scanning process for multiple page builders with one click
+Some plugins store images as an ID number rather than a link. Advanced Custom Fields, WooCommerce product galleries, Pods, Custom Field Suite, the SEO plugins and the slider plugins all work that way. The free version cannot follow those, so an image used only in one of those places can appear in your unused list while your site is still using it.
 
-- Advanced Filtering - Pro
-    - Media Filter by Year
-    - Media Filter by Type (jpg, png, gif, wmv, mp4, etc.)
+It tells you when that applies to your site. If one of those plugins is holding media, the dashboard says so, with a count and the plugin name, before you delete anything. A file can also be referenced by a shortcode or a dynamic tag that builds the link when the page loads, and those cannot be counted in advance.
 
-- One Shot Download (all files)
+So treat the results as a list to review rather than a verdict, and keep a backup before deleting. Pro reads all of the above.
 
-- One Shot Removal (all files)
+### **[Pro](https://mediahygiene.com)**
 
-- Folder Scan (sub-folder scanning coming soon!)
+Pro reads the places the free version cannot.
 
-- Woocommerce
+**Media stored by plugins**
 
-- Custom Post Types
+- Advanced Custom Fields, including image, gallery, file and repeater fields
+- WooCommerce product galleries, category images, downloadable files and custom tabs
+- Pods
+- Custom Field Suite
+- Jet Engine
+- Yoast SEO, All in One SEO and SEO Press
+- Slider Revolution, Meta Slider and Smart Slider
 
-- SEO Plugins
-    - All in One
-    - Yoast
-    - SEO Press
+**Wider coverage of the builders**
 
-- Custom Fields Plugins - Pro
-    - ACF
-    - Pods
-    - Custom Field Suite
-    - Custom Post Suits
+The free version reads page builders on your pages and posts. Pro also reads saved templates, headers, footers, theme options and custom post types, so a template reused across the site is not mistaken for unused content.
 
-- Sliders
-    - Meta Slider
-    - Slider Revolution
+**Stronger matching**
 
-### **[Pro](https://mediahygiene.com)** (coming soon)
+Pro matches resized copies, scaled, rotated and edited versions back to the original file, follows references inside JSON and serialized data, and works on sites where the uploads folder has been moved.
 
-- Custom Fields Plugins - Pro
-    - Jet Engine (coming soon)
-    - Meta Box (coming soon)
-    - CPT UI (coming soon)
+**Tools**
 
-- Remote server backup and restore - Pro (coming soon)
+- Folder Scan, which checks the uploads folder for files with no database record at all
+- Quarantine, which moves files aside first so you can restore them if something was in use
+- One shot download and one shot delete for the whole list rather than a page at a time
+- Filter by year and by file type
+- WP-CLI commands for large libraries, so a scan is not limited by browser timeouts
+- Direct support from the plugin
 
-- Scheduled Scans - Pro (coming soon)
+### Coming to Pro
 
-- Custom Email Notifications - Pro (coming soon)
-
-- WPML / Weglot / TranslatePress (coming soon)
+- Meta Box
+- CPT UI
+- Remote server backup and restore
+- Scheduled scans, so a scan can run on a timer rather than being started by hand
+- WPML, Weglot and TranslatePress
 
 
 == Installation ==
@@ -179,17 +183,35 @@ Please check our website to see a completely list of compatible plugins/themes.
 
 == Frequently Asked Questions ==
 
-= How do I know which media files are unused and safe to delete? =
+= How do I know which media files are unused? =
 
-The Media Hygiene plugin has a built-in media scanner that looks at the WordPress database, theme and plugin(s) to identify which media files are no longer in use. You'll be presented a list in our dashboard that is safe to delete.
+The plugin scans the content sources it supports: posts and pages including drafts, Site Editor templates and template parts, synced patterns, the Customizer and site identity settings, widgets, and the builders listed in the compatibility table. A file is reported as unused when no reference to it was found in any of those places.
 
-Please backup your site before you delete the files.
+That is a statement about where we looked, not a guarantee about your whole site. A file can still be in use somewhere the free version does not read, for example a custom field defined in your theme's code, or a reference built at page render time by a shortcode or a dynamic tag. The dashboard tells you when it detects a coverage gap like that, with the source and a count.
 
-= Will this plugin remove any media files that are still being used on my website? =
+So treat the list as a shortlist to review, not a verdict. Keep a current backup, check anything you are unsure about, and whitelist the files you want to keep.
 
-The Media Hygiene plugin will not remove media files that are in use on your website. This means that if a media file is being used in a post, page, or other database entry, it will NOT show up in the scanning results and be presented as an option to be deleted.
+= Could a file I am still using show up as unused? =
 
-If you are certain that some files are being used on your site, you can whitelist that file and it will longer be considered for deletion.
+It can, and it is worth knowing when. The plugin never deletes anything on its own: nothing is removed unless you select it and confirm. The question is whether the list you are choosing from is right.
+
+If a file is referenced in a scanned source, a post, a page, a template, a widget, a site logo or a supported builder, it is detected and kept out of the unused list. What the free version cannot follow is media stored outside those sources: custom fields registered in theme or plugin code, and content assembled when the page is rendered rather than saved in the database.
+
+Two things protect you. The dashboard reports a detected coverage gap with its source and count, so you know to look closer before deleting. And the whitelist locks any file you want kept, so it stays out of every future scan.
+
+= Does the plugin send any data off my site? =
+
+Two things, and you control both.
+
+Usage statistics are opt-in. Nothing is sent unless you click "Yes, allow" on the notice inside the plugin. If you do, we send your site URL along with totals: how many media files you have, how much space they use, and how much of that is unused. We do not send filenames, file contents, post content, user details, or email addresses. You can turn it off at any time in Settings.
+
+The summary email is sent from your own site to your own admin email address, using WordPress. It is not sent to us and we never see it. It is on by default, once a month, and only when files have actually been uploaded since your last scan. Set Frequency to "Off (no emails)" in Settings to stop it.
+
+= Which page builders does the free version support? =
+
+The free version detects media placed with Gutenberg, Elementor, Divi, Bricks, Visual Composer and OceanWP on your pages and posts. It also reads sliders built with LayerSlider, the slider plugin that ships with the Enfold theme.
+
+Pro reads those same builders everywhere else as well: saved templates, theme options, headers and footers, and custom post types. Pro also reads media stored by plugins in their own custom fields and database tables, such as Advanced Custom Fields, WooCommerce, Pods, Custom Field Suite, the SEO plugins and the slider plugins. The free version cannot see media stored that way, which is why it warns you when one of those plugins is active.
 
 = How does the plugin identify and remove the unused media files? =
 
@@ -247,7 +269,7 @@ The Media Hygiene plugin does not have a built-in feature to restore deleted med
 
 = Is there a way to schedule the plugin to run automatically at regular intervals? =
 
-No, the Media Hygiene plugin does not allow you to schedule the plugin to run automatically at regular intervals. We will be including this in the Pro version of the plugin.
+Scans are started by you, not on a timer, in both the free version and Pro. What you can schedule is the summary email. Under Settings you can have the plugin email you about new media daily, weekly, every two weeks, monthly or quarterly, or turn it off. The email tells you what has been added since your last scan, so you know when another scan is worth running.
 
 = Does this plugin work with multisite installation of WordPress? =
 
@@ -277,3 +299,174 @@ The Media Hygiene plugin is designed to be compatible with the latest version of
 
 * PHP 8.0 or greater is required
 * MySQL 5.6 or greater is recommended
+
+== Upgrade Notice ==
+
+= 6.1.0 =
+Version 6.1.0 improves scan accuracy, safety, reporting, and overall usability across Media Hygiene.
+
+- More accurate unused-media detection for site logos, Customizer images, and block-theme templates.
+
+- Clearer warnings when Media Hygiene finds content it cannot fully check.
+
+- Safer Trash, restore, and permanent deletion with better confirmations and completion reporting.
+
+- Improved ACF, Secure Custom Fields and similar custom field plugins, compatibility information, and summary email reporting.
+
+- Additional reliability, performance, security, navigation, translation, and usability improvements throughout the plugin.
+
+== Changelog ==
+
+= 6.1.0 =
+This release is mostly about trust: files that were being listed as unused when they were still on your site, and warnings that were telling you the wrong thing.
+
+Files that were in use, but listed as unused:
+
+* Fixed: your site logo could show as unused on almost every theme. Site logos, site icons, and any image set in the Customizer are now recognised.
+* Fixed: on a block theme, images placed in a header, footer or page template through the Site Editor were never checked, so they could show as unused. Templates, template parts and reusable blocks are now included in every scan.
+* Fixed: images in your widgets and in Additional CSS were not checked, and could show as unused.
+* Fixed: a file could be wrongly held back from your unused list because of a mix-up with unrelated theme settings. Across five real sites this cut the number of files being guessed at from 79 to 2.
+
+Safer deleting:
+
+* Added: deleting permanently now asks you to confirm, twice for a bulk delete and once for a single file. It asked nothing at all before, while moving files to Trash asked twice. Trash can be undone and permanent deletion cannot, so the warnings were the wrong way round.
+* Added: moving files to Trash now asks you to confirm once, and tells you how many files.
+* Fixed: Restore All on the Trash tab could say everything was restored while files were still sitting there. It now keeps going until the Trash is genuinely empty, and tells you if a file could not be restored.
+* Fixed: whitelisting a file could quietly remove it from your unused list without actually adding it to the whitelist. This also affected restoring from the whitelist and the bulk versions of both.
+* Fixed: the message confirming files had been moved to Trash did not always appear, and its link went to the Media Library rather than the Trash tab.
+
+Clearer about what the free version can and cannot see:
+
+* Changed: when the plugin cannot read media held by another plugin, it now tells you how many files and which plugin holds them, instead of giving a vague warning. When there is nothing to report it stays quiet.
+* Added: for Advanced Custom Fields and Secure Custom Fields, the plugin tells you how many media fields are set up on your site, so you know where to check before deleting.
+* Changed: the dashboard now says plainly that the free version reads your posts and pages, and that media kept in a theme option, a plugin field or a store product is outside that scan.
+
+The summary email:
+
+* Fixed: the email setting showed "Disabled" while the plugin was quietly sending it every three months. The setting and the behaviour now match, and the default is monthly.
+* Fixed: pictures in the email were being sent at full size, so opening it could pull down tens of megabytes to show a row of thumbnails. It now uses the small version WordPress already made.
+
+Finding your way around:
+
+* Changed: Media Hygiene now takes a single row in the WordPress menu instead of repeating the same four links in two places.
+* Fixed: the "View Error Log" link in Settings did nothing. It is now the Scan Log, and it records what each page builder reader found during a scan.
+* Changed: the "Download Media" button is now "Download Current Page Media", because that is all it ever did.
+* Fixed: the help popups on the Scan, Download and Trash buttons closed before you could click the link inside them.
+* Fixed: after a scan finished, the page stayed scrolled below the results, so a scan that had worked did not look like it. It now returns to the top.
+
+Also in this release:
+
+* Faster: large media libraries are noticeably quicker to check for new files.
+* Faster: the plugin no longer adds weight to every page load of your site.
+* Fixed: a scan could end on a blank page instead of a message, usually on a brand new install or after an interrupted scan.
+* Added: the plugin can now be translated. It had no translation file before, so translators had nothing to work from.
+* Tested with WordPress 7.1.3.
+
+= 6.0.0 =
+*Released 25 May 2026*
+
+* Rewritten scan engine: it reads your page content directly instead of making an HTTP request for every URL.
+* Scanning is significantly faster on large media libraries, with up to 30 times fewer database queries per batch and lower memory use.
+* A single problem item no longer stops the whole scan.
+* Clear error messages when a scan step fails, instead of a scan that simply stops.
+* Hardened the handling of background requests.
+* Contact details in the deactivation form are only sent if you tick the box.
+* Tested with WordPress 7.0.0.
+
+= 5.0.0 =
+*Released 25 April 2026*
+
+* Hardened every database query against SQL injection.
+* Fixed a cross site scripting issue in the copy media URL action.
+* Server errors are no longer shown in the browser.
+* Anonymous usage data is now opt in. Nothing is sent unless you agree.
+* The deactivation feedback form now has an opt in checkbox.
+* Fixed dashboard figures showing the wrong values.
+* Fixed the count on the Unused tab not updating when a filter was applied.
+* Download and Trash now respect the filter you have applied.
+* Fixed the last scan date showing incorrectly.
+* Lower memory use during a scan and while building a download.
+* Removed PHP notices in some setups.
+* Minimum PHP version raised to 8.0.
+
+= 4.0.2 =
+*Released 28 March 2026*
+
+* Fixed missing permission checks on background requests, which now refuse unauthorised calls.
+* Fixed SQL injection risks in the whitelist, bulk action, scan, Elementor and download handlers.
+* Fixed unescaped output in the security token handlers.
+* Fixed an email header injection risk in the scheduled notification.
+* Fixed unescaped links in the scheduled email.
+* Fixed the file version used for cache busting, so updated files reach browsers.
+
+= 4.0.1 =
+*Released 1 May 2025*
+
+* Security release.
+
+= 4.0.0 =
+*Released 26 November 2024*
+
+* Rebuilt how Elementor content is scanned.
+* Added Trash, so files can be removed and restored rather than deleted outright.
+* The position of Media Hygiene in the WordPress menu can now be changed.
+
+= 3.0.1 =
+*Released 3 July 2024*
+
+* Security release.
+
+= 3.0.0 =
+*Released 27 April 2024*
+
+* Added a setting for how many results to show per page.
+* Added the email notification telling you about media uploaded since your last scan.
+* Improved detection of background images.
+
+= 2.0.0 =
+*Released 20 November 2023*
+
+* Reworked the interface for readability.
+* General performance improvements.
+* Confirmed PHP 8.1 compatibility.
+* Updated error log handling.
+* Updated data privacy handling.
+* Added the option to exclude CSS files from a scan.
+* Added a FAQ tab.
+* Added LiteSpeed Cache compatibility.
+* Fixed the settings page failing to load.
+* Fixed a scan that could get stuck.
+
+= 1.0.5 =
+*Released 8 September 2023*
+
+* Improved detection of images in page source code.
+* Added support for WP Engine server setups.
+* Added the deactivation feedback form.
+* Improved the dashboard interface.
+
+= 1.0.4 =
+*Released 12 July 2023*
+
+* Performance and compatibility improvements.
+
+= 1.0.3 =
+*Released 17 June 2023*
+
+* Performance improvements.
+
+= 1.0.2 =
+*Released 25 April 2023*
+
+* Added compatibility with the Astra and OceanWP themes.
+
+= 1.0.1 =
+*Released 10 April 2023*
+
+* Improved detection for the Enfold theme.
+* Better scan notices for themes and plugins.
+
+= 1.0.0 =
+*Released 6 April 2023*
+
+* First release.

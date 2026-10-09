@@ -33,10 +33,10 @@ class wmh_error_log
         $cleared = $this->conn->query($clear_error_log_sql);
         if ($cleared) {
             $flg = 1;
-            $message = esc_html(__('Error log cleared', MEDIA_HYGIENE));
+            $message = esc_html(__('Scan log cleared', MEDIA_HYGIENE));
         } else {
             $flg = 1;
-            $message = esc_html(__('Something is wrong to clear error log', MEDIA_HYGIENE));
+            $message = esc_html(__('The scan log could not be cleared. Please try again.', MEDIA_HYGIENE));
         }
         $output = array(
             'flg' => $flg,

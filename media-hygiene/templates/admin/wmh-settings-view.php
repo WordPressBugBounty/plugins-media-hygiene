@@ -46,11 +46,13 @@ if (isset($wmh_scan_option_data) && !empty($wmh_scan_option_data)) {
         $menu_position_input = $wmh_scan_option_data['menu_position_input'];
     }
 
-    /* timeframes. */
+    /* timeframes. Monthly is the default so the summary email actually reaches
+     * people who never open Settings. An unset value used to display as
+     * "Disabled" while the cron silently ran quarterly, which was misleading. */
     if (isset($wmh_scan_option_data['wmh_timeframes']) && $wmh_scan_option_data['wmh_timeframes'] != '') {
         $wmh_timeframes = $wmh_scan_option_data['wmh_timeframes'];
     } else {
-        $wmh_timeframes = $wmh_scan_option_data['wmh_timeframes'];
+        $wmh_timeframes = 'monthly';
     }
 
     /* email notification send to */
@@ -162,7 +164,7 @@ $wmh_general->fn_wmh_get_template('wmh-header-view.php');
                                             </div>
                                             <div class="wmh-setting-card-body">
                                                 <input type="number" class="form-control media-per-page-input" id="media-per-page-input" name="media-per-page-input" value="<?php echo esc_attr($media_per_page_input); ?>" min="1" max="200" onkeypress="return restrictAlphabets(event)">
-                                                <p class="wmh-field-hint"><?php _e('Recommended: 10–50 items.', MEDIA_HYGIENE); ?></p>
+                                                <p class="wmh-field-hint"><?php _e('Recommended: 10 to 50 items.', MEDIA_HYGIENE); ?></p>
                                             </div>
                                         </div>
                                     </div>
@@ -192,8 +194,7 @@ $wmh_general->fn_wmh_get_template('wmh-header-view.php');
                                             <div class="col-xl-3 col-md-4 col-sm-12 mb-3 mb-md-0">
                                                 <label class="wmh-field-label" for="wmh-timeframes"><?php _e('Frequency', MEDIA_HYGIENE); ?></label>
                                                 <select class="form-control" id="wmh-timeframes" name="wmh-timeframes">
-                                                    <option value="" <?php selected($wmh_timeframes, ''); ?>><?php _e('— Disabled —', MEDIA_HYGIENE); ?></option>
-                                                    <option value="none" <?php selected($wmh_timeframes, 'none'); ?>><?php _e('None', MEDIA_HYGIENE); ?></option>
+                                                    <option value="none" <?php selected($wmh_timeframes, 'none'); ?>><?php _e('Off (no emails)', MEDIA_HYGIENE); ?></option>
                                                     <option value="daily" <?php selected($wmh_timeframes, 'daily'); ?>><?php _e('Daily', MEDIA_HYGIENE); ?></option>
                                                     <option value="weekly" <?php selected($wmh_timeframes, 'weekly'); ?>><?php _e('Weekly', MEDIA_HYGIENE); ?></option>
                                                     <option value="biweekly" <?php selected($wmh_timeframes, 'biweekly'); ?>><?php _e('Bi-Weekly', MEDIA_HYGIENE); ?></option>
@@ -245,19 +246,19 @@ $wmh_general->fn_wmh_get_template('wmh-header-view.php');
                                                             <p><?php _e("Menu Structure", MEDIA_HYGIENE); ?></p>
                                                             <ul>
                                                                 <li><?php _e("2 - Dashboard", MEDIA_HYGIENE); ?></li>
-                                                                <li class="wmh-separator"><?php _e("4 – Separator", MEDIA_HYGIENE); ?></li>
+                                                                <li class="wmh-separator"><?php _e("4 - Separator", MEDIA_HYGIENE); ?></li>
                                                                 <li><?php _e("5 - Posts", MEDIA_HYGIENE); ?></li>
                                                                 <li><?php _e("10 - Media", MEDIA_HYGIENE); ?></li>
                                                                 <li><?php _e("15 - Links", MEDIA_HYGIENE); ?></li>
                                                                 <li><?php _e("20 - Pages", MEDIA_HYGIENE); ?></li>
                                                                 <li><?php _e("25 - Comments", MEDIA_HYGIENE); ?></li>
-                                                                <li class="wmh-separator"><?php _e("59 – Separator", MEDIA_HYGIENE); ?></li>
+                                                                <li class="wmh-separator"><?php _e("59 - Separator", MEDIA_HYGIENE); ?></li>
                                                                 <li><?php _e("60 - Appearance", MEDIA_HYGIENE); ?></li>
                                                                 <li><?php _e("65 - Plugins", MEDIA_HYGIENE); ?></li>
                                                                 <li><?php _e("70 - Users", MEDIA_HYGIENE); ?></li>
                                                                 <li><?php _e("75 - Tools", MEDIA_HYGIENE); ?></li>
                                                                 <li><?php _e("80 - Settings", MEDIA_HYGIENE); ?></li>
-                                                                <li class="wmh-separator"><?php _e("99 – Separator", MEDIA_HYGIENE); ?></li>
+                                                                <li class="wmh-separator"><?php _e("99 - Separator", MEDIA_HYGIENE); ?></li>
                                                             </ul>
                                                             <i></i>
                                                         </span>
@@ -276,16 +277,16 @@ $wmh_general->fn_wmh_get_template('wmh-header-view.php');
                                         <div class="wmh-setting-card wmh-setting-card-info">
                                             <div class="wmh-setting-card-title">
                                                 <i class="fa-solid fa-triangle-exclamation wmh-setting-icon"></i>
-                                                <span><?php _e('Error Log', MEDIA_HYGIENE); ?></span>
+                                                <span><?php _e('Scan Log', MEDIA_HYGIENE); ?></span>
                                             </div>
-                                            <p class="wmh-toggle-hint"><?php _e('View a log of errors encountered during scans.', MEDIA_HYGIENE); ?></p>
-                                            <a href="<?php echo esc_url(admin_url('admin.php?page=wmh-media-hygiene&tab=error_log')); ?>" class="wmh-text-link">
-                                                <i class="fa-solid fa-arrow-right" style="margin-right:4px;"></i><?php _e('View Error Log', MEDIA_HYGIENE); ?>
+                                            <p class="wmh-toggle-hint"><?php _e('Record what each page builder reader found during a scan. Useful when media is missing from the results.', MEDIA_HYGIENE); ?></p>
+                                            <a href="<?php echo esc_url(admin_url('admin.php?page=wmh-error-log')); ?>" class="wmh-text-link">
+                                                <i class="fa-solid fa-arrow-right" style="margin-right:4px;"></i><?php _e('View Scan Log', MEDIA_HYGIENE); ?>
                                             </a>
                                             <span class="wmh-tooltip-info tooltip-1" style="margin-left:8px;">
                                                 <i class="fa-solid fa-circle-question"></i>
                                                 <span class="right">
-                                                    <p><?php _e('Please refer FAQ.', MEDIA_HYGIENE); ?> <a href="https://mediahygiene.com/faq/#error-log" target="_blank"><?php _e('Read FAQ', MEDIA_HYGIENE); ?></a></p>
+                                                    <p><?php _e('Please refer FAQ.', MEDIA_HYGIENE); ?> <a href="<?php echo wmh_site_link('faq', 'settings-error-log', 'error-log'); ?>" target="_blank"><?php _e('Read FAQ', MEDIA_HYGIENE); ?></a></p>
                                                     <i></i>
                                                 </span>
                                             </span>
@@ -334,14 +335,76 @@ $wmh_general->fn_wmh_get_template('wmh-header-view.php');
                 <div class="tab-pane fade" id="addons" role="tabpanel" aria-labelledby="addons-tab">
                     <div class="main-area wmh-settings-tab-body">
 
-                        <!-- Upgrade banner -->
-                        <div class="wmh-pro-banner">
-                            <div class="wmh-pro-banner-text">
-                                <strong><?php _e('Unlock full compatibility with Pro', MEDIA_HYGIENE); ?></strong>
-                                <span><?php _e('Get support for WooCommerce, ACF, Divi, Avada, and 15+ more tools.', MEDIA_HYGIENE); ?></span>
-                            </div>
-                            <a href="https://mediahygiene.com/pricing/" target="_blank" class="wmh-pro-banner-btn"><?php _e('Upgrade to Pro', MEDIA_HYGIENE); ?> &rarr;</a>
-                        </div>
+                        <?php
+                        $tools = array(
+                            array('Elementor',                       true,  true),
+                            array('WooCommerce',                     false, true),
+                            array('Advanced Custom Fields (ACF)',    false, true),
+                            array('PODS',                            false, true),
+                            array('Custom Field Suite',              false, true),
+                            array('All In One SEO',                  false, true),
+                            array('Yoast SEO',                       false, true),
+                            array('SEO Press',                       false, true),
+                            array('Slider Revolution',               false, true),
+                            array('Meta Slider',                     false, true),
+                            array('Smart Slider',                    false, true),
+                            array('Divi',                            true,  true),
+                            array('Avada',                           false, true),
+                            array('WP Bakery',                       false, true),
+                            array('Beaver Builder',                  false, true),
+                            array('Bricks',                          true,  true),
+                            array('Visual Composer',                 true,  true),
+                            array('Flatsome',                        false, true),
+                            /* LayerSlider, not Enfold: the class reads the layerslider
+                             * table, which is the slider plugin Enfold bundles. Enfold's
+                             * own layout content is read as ordinary post content like
+                             * any other theme, so naming this row Enfold implied a
+                             * theme integration that does not exist. */
+                            array('LayerSlider (bundled with Enfold)', true,  true),
+                            array('Ocean WP',                        true,  true),
+                            array('Custom Post Type',                false, true),
+                        );
+
+                        /* Show what the free version already reads first, then
+                         * alphabetically, so the green ticks are not scattered
+                         * down the list. Sorting here rather than reordering the
+                         * array keeps this true when a tool is added later. */
+                        usort($tools, function ($a, $b) {
+                            if ($a[1] !== $b[1]) {
+                                return $a[1] ? -1 : 1;
+                            }
+                            return strcasecmp($a[0], $b[0]);
+                        });
+
+                        $wmh_free_tool_count = count(array_filter($tools, function ($tool) {
+                            return $tool[1];
+                        }));
+                        ?>
+
+                        <?php
+                        /* Say what the free version reads before showing a table
+                         * where most rows are a red cross. The page used to open
+                         * with a Pro banner and then fourteen crosses, so the
+                         * first thing a free user learned was what they do not
+                         * have, on a page they opened to find out what they do.
+                         * The count comes from the table itself, so it cannot
+                         * drift when a tool is added. */
+                        ?>
+                        <p class="wmh-compat-intro">
+                            <strong><?php _e('What the free version reads', MEDIA_HYGIENE); ?></strong><br />
+                            <?php
+                            printf(
+                                /* translators: %s: number of supported page builders and themes */
+                                esc_html(_n(
+                                    'Every scan reads your posts, pages and media library, block theme templates and reusable blocks, your site logo and site icon, Customizer settings, widgets and Additional CSS, plus layouts built with %s page builder or theme listed below. Anything ticked in the Free column needs no upgrade.',
+                                    'Every scan reads your posts, pages and media library, block theme templates and reusable blocks, your site logo and site icon, Customizer settings, widgets and Additional CSS, plus layouts built with the %s page builders and themes listed below. Anything ticked in the Free column needs no upgrade.',
+                                    $wmh_free_tool_count,
+                                    MEDIA_HYGIENE
+                                )),
+                                esc_html(number_format_i18n($wmh_free_tool_count))
+                            );
+                            ?>
+                        </p>
 
                         <div class="wmh-table-scroll">
                         <table class="widefat wmh-compat-table">
@@ -354,49 +417,61 @@ $wmh_general->fn_wmh_get_template('wmh-header-view.php');
                             </thead>
                             <tbody>
                                 <?php
-                                $tools = array(
-                                    array('Elementor',                       true,  true),
-                                    array('WooCommerce',                     false, true),
-                                    array('Advanced Custom Fields (ACF)',    false, true),
-                                    array('PODS',                            false, true),
-                                    array('Custom Field Suite',              false, true),
-                                    array('All In One SEO',                  false, true),
-                                    array('Yoast SEO',                       false, true),
-                                    array('SEO Press',                       false, true),
-                                    array('Slider Revolution',               false, true),
-                                    array('Meta Slider',                     false, true),
-                                    array('Smart Slider',                    false, true),
-                                    array('Divi',                            false, true),
-                                    array('Avada',                           false, true),
-                                    array('WP Bakery',                       false, true),
-                                    array('Beaver Builder',                  false, true),
-                                    array('Bricks',                         false, true),
-                                    array('Visual Composer',                 false, true),
-                                    array('Flatsome',                        false, true),
-                                    array('Enfold',                          false, true),
-                                    array('Ocean WP',                        false, true),
-                                    array('Custom Post Type',                false, true),
-                                );
+
                                 foreach ($tools as $i => $tool) :
                                     $row_class = ($i % 2 === 0) ? '' : 'alternate';
+                                    /* mark the last free row so the CSS can rule off the group */
+                                    if ($i === $wmh_free_tool_count - 1) {
+                                        $row_class .= ' wmh-compat-free-end';
+                                    }
                                 ?>
                                 <tr class="<?php echo esc_attr($row_class); ?>">
-                                    <td><?php echo esc_html(__($tool[0], MEDIA_HYGIENE)); ?></td>
+                                    <?php /* product names, not translatable text, and a
+                                             variable passed to __() cannot be extracted
+                                             into the .pot anyway */ ?>
+                                    <td><?php echo esc_html($tool[0]); ?></td>
+                                    <?php $wmh_tool_note = isset($tool[3]) ? $tool[3] : ''; ?>
                                     <td>
                                         <?php if ($tool[1]) : ?>
                                             <span class="wmh-compat-yes"><i class="fa-solid fa-check"></i></span>
+                                            <?php if ($wmh_tool_note !== '') : ?>
+                                                <span class="wmh-compat-note"><?php echo esc_html($wmh_tool_note); ?></span>
+                                            <?php endif; ?>
                                         <?php else : ?>
                                             <span class="wmh-compat-no"><i class="fa-solid fa-xmark"></i></span>
                                         <?php endif; ?>
                                     </td>
                                     <td class="wmh-compat-col-pro">
                                         <span class="wmh-compat-yes"><i class="fa-solid fa-check"></i></span>
+                                        <?php if ($wmh_tool_note !== '') : ?>
+                                            <span class="wmh-compat-note"><?php echo esc_html($wmh_tool_note); ?></span>
+                                        <?php endif; ?>
                                     </td>
                                 </tr>
                                 <?php endforeach; ?>
                             </tbody>
                         </table>
                         </div><!-- .wmh-table-scroll -->
+
+                        <?php /* This note explains the table, so it belongs with the
+                                 table. Moving the banner below the table put a sales
+                                 pitch between the two, which is the same mistake as
+                                 opening the tab with it, one row down. */ ?>
+                        <p class="wmh-compat-scope-note">
+                            <?php _e('<strong>How to read this table.</strong> A tick in the free column means the free version reads that builder\'s saved content, including its templates, wherever it is used on your site. What the free version cannot do is read content that is only assembled when a page is displayed, such as shortcodes, dynamic tags and widget output, or media that plugins keep in their own custom fields and tables. Pro renders each page the way a visitor sees it before checking, and reads theme options, widgets and plugin fields as well.', MEDIA_HYGIENE); ?>
+                        </p>
+
+                        <?php /* The offer comes last, after the answer and after the
+                                 explanation. It used to open the tab, so someone who
+                                 came to find out what the free version supports met a
+                                 sales pitch first and fourteen red crosses second. */ ?>
+                        <div class="wmh-pro-banner">
+                            <div class="wmh-pro-banner-text">
+                                <strong><?php _e('Unlock full compatibility with Pro', MEDIA_HYGIENE); ?></strong>
+                                <span><?php _e('Get support for WooCommerce, ACF, Slider Revolution, custom post types, and 15+ more tools.', MEDIA_HYGIENE); ?></span>
+                            </div>
+                            <a href="<?php echo wmh_site_link('pricing', 'settings-compat-tab'); ?>" target="_blank" class="wmh-pro-banner-btn"><?php _e('Upgrade to Pro', MEDIA_HYGIENE); ?> &rarr;</a>
+                        </div>
 
                     </div>
                 </div>

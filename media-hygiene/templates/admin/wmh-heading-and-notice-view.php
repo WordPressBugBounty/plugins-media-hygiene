@@ -1,98 +1,23 @@
 <?php
 
+defined('ABSPATH') or die('Plugin file cannot be accessed directly.');
+
+
 /* get scan status */
 $scan_status = get_option('wmh_scan_status');
 $wmh_scan_status_new = get_option('wmh_scan_status_new');
 
-/* get all plugin list */
-$all_plugins = get_plugins();
-$all_plugins_keys = array_keys($all_plugins);
+/* The list of plugins whose media storage the free version cannot read used
+ * to live here, feeding a dashboard notice. That notice is gone (see below),
+ * so the list, the get_plugins() call that fed it and the $all_plugins_keys
+ * it was matched against were all removed with it: nothing on this screen
+ * reads them now, and get_plugins() is not free on every dashboard load.
+ *
+ * The authoritative version of that list is the compatibility table on the
+ * Settings screen, which builds from its own get_plugins() call. Coverage
+ * gaps are now reported from a real count, in
+ * fn_wmh_count_unreadable_references() in includes/wmh-general.php. */
 
-/* pro plugin */
-$pro_plugins = array(
-    'elementor/elementor.php',/* Okay */
-    'elementor-pro/elementor-pro.php',/* Okay */
-    'smart-slider-3/smart-slider-3.php',/* Okay */
-    'smart-slider-3-pro/smart-slider-3.php',
-    'ml-slider/ml-slider.php',/* Okay */
-    'ml-slider-pro/ml-slider.php',
-    'revslider/revslider.php',/* Okay */
-    'revslider-pro/revslider.php',
-    'woocommerce/woocommerce.php',/* Okay */
-    'advanced-custom-fields/acf.php',/* Okay */
-    'advanced-custom-fields-pro/acf.php',/* Okay */
-    'pods/init.php',/* Okay */
-    'pods-pro/init.php',
-    'visualcomposer/plugin-wordpress.php',/* Okay */
-    'visualcomposer-pro/plugin-wordpress.php',
-    'custom-field-suite/cfs.php',/* Okay */
-    'custom-field-suite-pro/cfs.php',
-    'wp-seopress/seopress.php',/*Okay */
-    'wp-seopress-pro/seopress-pro.php',/*Okay */
-    'wordpress-seo/wp-seo.php',/* Okay Yoast */
-    'wordpress-seo-premium/wp-seo-premium.php',/* Yoast Premium */
-    'all-in-one-seo-pack/all_in_one_seo_pack.php',/* Okay */
-    'all-in-one-seo-pack-pro/all_in_one_seo_pack_pro.php',
-);
-
-$pro_plugin_installed = false;
-$pro_plugin_list_html = '<ul class="wmh-compatibility-notice">';
-if (isset($all_plugins_keys) && !empty($all_plugins_keys)) {
-    foreach ($all_plugins_keys as $plugin_key) {
-        if (in_array($plugin_key, $pro_plugins)) {
-            $pro_plugin_installed = true;
-            /* ----------- new ---------------  */
-            if ($plugin_key == 'elementor/elementor.php') {
-                $pro_plugin_list_html .= __('<li>Elementor</li>', MEDIA_HYGIENE);
-            } else if ($plugin_key == 'elementor-pro/elementor-pro.php') {
-                $pro_plugin_list_html .= __('<li>Elementor Pro</li>', MEDIA_HYGIENE);
-            } else if ($plugin_key == 'smart-slider-3/smart-slider-3.php') {
-                $pro_plugin_list_html .= __('<li>Smart Slider</li>', MEDIA_HYGIENE);
-            } else if ($plugin_key == 'smart-slider-3-pro/smart-slider-3.php') {
-                $pro_plugin_list_html .= __('<li>Smart Slider Pro</li>', MEDIA_HYGIENE);
-            } else if ($plugin_key == 'ml-slider/ml-slider.php') {
-                $pro_plugin_list_html .= __('<li>Meta Slider</li>', MEDIA_HYGIENE);
-            } else if ($plugin_key == 'ml-slider-pro/ml-slider.php') {
-                $pro_plugin_list_html .= __('<li>Meta Slider Pro</li>', MEDIA_HYGIENE);
-            } else if ($plugin_key == 'revslider/revslider.php') {
-                $pro_plugin_list_html .= __('<li>Slider Revolution</li>', MEDIA_HYGIENE);
-            } else if ($plugin_key == 'revslider-pro/revslider.php') {
-                $pro_plugin_list_html .= __('<li>Slider Revolution Pro</li>', MEDIA_HYGIENE);
-            } else if ($plugin_key == 'woocommerce/woocommerce.php') {
-                $pro_plugin_list_html .= __('<li>Woocommerce</li>', MEDIA_HYGIENE);
-            } else if ($plugin_key == 'advanced-custom-fields/acf.php') {
-                $pro_plugin_list_html .= __('<li>ACF(Advanced Custom Field)</li>', MEDIA_HYGIENE);
-            } else if ($plugin_key == 'advanced-custom-fields-pro/acf.php') {
-                $pro_plugin_list_html .= __('<li>ACF(Advanced Custom Field Pro)</li>', MEDIA_HYGIENE);
-            } else if ($plugin_key == 'pods/init.php') {
-                $pro_plugin_list_html .= __('<li>PODS</li>', MEDIA_HYGIENE);
-            } else if ($plugin_key == 'pods-pro/init.php') {
-                $pro_plugin_list_html .= __('<li>PODS Pro</li>', MEDIA_HYGIENE);
-            } else if ($plugin_key == 'visualcomposer/plugin-wordpress.php') {
-                $pro_plugin_list_html .= __('<li>Visual Composer</li>', MEDIA_HYGIENE);
-            } else if ($plugin_key == 'visualcomposer-pro/plugin-wordpress.php') {
-                $pro_plugin_list_html .= __('<li>Visual Composer Pro</li>', MEDIA_HYGIENE);
-            } else if ($plugin_key == 'custom-field-suite/cfs.php') {
-                $pro_plugin_list_html .= __('<li>Custom Field Suite</li>', MEDIA_HYGIENE);
-            } else if ($plugin_key == 'custom-field-suite-pro/cfs.php') {
-                $pro_plugin_list_html .= __('<li>Custom Field Suite Pro</li>', MEDIA_HYGIENE);
-            } else if ($plugin_key == 'wp-seopress/seopress.php') {
-                $pro_plugin_list_html .= __('<li>SEO Press</li>', MEDIA_HYGIENE);
-            } else if ($plugin_key == 'wp-seopress-pro/seopress-pro.php') {
-                $pro_plugin_list_html .= __('<li>SEO Press Pro</li>', MEDIA_HYGIENE);
-            } else if ($plugin_key == 'wordpress-seo/wp-seo.php') {
-                $pro_plugin_list_html .= __('<li>Yoast Seo</li>', MEDIA_HYGIENE);
-            } else if ($plugin_key == 'wordpress-seo-premium/wp-seo-premium.php') {
-                $pro_plugin_list_html .= __('<li>Yoast Seo Premium</li>', MEDIA_HYGIENE);
-            } else if ($plugin_key == 'all-in-one-seo-pack/all_in_one_seo_pack.php') {
-                $pro_plugin_list_html .= __('<li>All In One Seo</li>', MEDIA_HYGIENE);
-            } else if ($plugin_key == 'all-in-one-seo-pack-pro/all_in_one_seo_pack_pro.php') {
-                $pro_plugin_list_html .= __('<li>All In One Seo Pro</li>', MEDIA_HYGIENE);
-            }
-        }
-    }
-}
-$pro_plugin_list_html .= '</ul>';
 
 
 /* Get data about permission checkbox */
@@ -135,16 +60,19 @@ $wmh_plugin_db_version_upgrade = get_option('wmh_plugin_db_version_upgrade');
 
         <?php }  ?>
 
-        <!-- notice alert -->
+        <!-- Backup warning. Stays on every load and cannot be dismissed: it is
+             the one notice that prevents an irreversible mistake.
+             It used to carry a review ask and "Upgrade to Pro to dismiss this
+             notice" as well. That made the only way to silence a safety warning
+             a purchase, so it read as a paywalled nag and taught people to skip
+             the box, warning included. It also ran to two lines and repeated the
+             review link from the dismissible notice further down, which showed
+             on screen at the same time. Warning only now, so it reads as one. -->
         <div class="notice notice-warning wmh-notice-backup mb-0">
             <p>
                 <span class="wmh-notice-icon"><i class="fa-solid fa-shield-halved"></i></span>
                 <b><?php _e('Always backup before making changes.', MEDIA_HYGIENE); ?></b>
-                <?php _e('Media Hygiene scans your library for unused files, but the dynamic nature of WordPress (themes, plugins, custom fields) means some files may be incorrectly flagged. Review items carefully before deleting.', MEDIA_HYGIENE); ?>
-                <a href="https://wordpress.org/support/plugin/media-hygiene/reviews/#new-post" target="_blank"><?php _e('Leave a review', MEDIA_HYGIENE); ?></a>
-                <?php _e('if you find it useful — it helps a lot. Upgrade to', MEDIA_HYGIENE); ?>
-                <a href="https://mediahygiene.com/pricing/" target="_blank"><?php _e('Media Hygiene Pro', MEDIA_HYGIENE); ?></a>
-                <?php _e('to dismiss this notice and unlock advanced features.', MEDIA_HYGIENE); ?>
+                <?php esc_html_e('The free version finds media by reading your posts and pages. Files used somewhere else, such as in a theme option, a plugin field or a store product, can still be listed as unused. Review items carefully before deleting.', MEDIA_HYGIENE); ?>
             </p>
         </div>
 
@@ -154,7 +82,7 @@ $wmh_plugin_db_version_upgrade = get_option('wmh_plugin_db_version_upgrade');
                 <p>
                     <span class="wmh-notice-icon"><i class="fa-solid fa-magnifying-glass"></i></span>
                     <b><?php _e('No scan has been run yet.', MEDIA_HYGIENE); ?></b>
-                    <?php _e('Click the <strong>Scan</strong> button to analyze your media library. Scan time depends on your server and the number of media files — please be patient and do not close the window until it completes.', MEDIA_HYGIENE); ?>
+                    <?php _e('Click the <strong>Scan</strong> button to analyze your media library. Scan time depends on your server and the number of media files. Please be patient and do not close the window until it completes.', MEDIA_HYGIENE); ?>
                 </p>
             </div>
         <?php } ?>
@@ -168,17 +96,143 @@ $wmh_plugin_db_version_upgrade = get_option('wmh_plugin_db_version_upgrade');
                 </p>
             </div>
         <?php } ?>
-        <!-- Premium plugin and theme installed info -->
-        <?php if ($pro_plugin_installed === true) { ?>
-            <div class="notice notice-info wmh-notice-compat mb-0">
+        <!-- Unreadable media references: measured, not guessed -->
+        <?php
+        /* Only after a scan. This warns about files that can show up in the
+         * unused list, and before the first scan there is no list to check
+         * against: every figure on the page reads 0. Shown then, it is a
+         * warning about nothing the user can act on yet, stacked under a
+         * notice telling them to run a scan. It also saves the query on a
+         * page where the answer cannot be used. */
+        $wmh_scan_has_run = !(isset($scan_status) && ($scan_status == '0' || $scan_status == ''));
+
+        $wmh_unreadable = array('sources' => array(), 'total' => 0);
+        if ($wmh_scan_has_run) {
+            $wmh_notice_general = new wmh_general();
+            $wmh_unreadable = $wmh_notice_general->fn_wmh_count_unreadable_references();
+        }
+
+        if (!empty($wmh_unreadable['sources'])) {
+            /* Two different claims, kept apart on purpose. A counted VALUE is a
+             * stored reference we can point at. A counted FIELD is only a place
+             * media can be stored, so it is described as a field and never added
+             * to the reference total. Merging them would put a confident number
+             * on something we did not actually count. */
+            $wmh_value_labels = array();
+            $wmh_field_labels = array();
+            foreach ($wmh_unreadable['sources'] as $wmh_src_label => $wmh_src) {
+                $wmh_src_count = (int) $wmh_src['count'];
+                $wmh_src_text  = esc_html($wmh_src_label) . ' (' . esc_html(number_format_i18n($wmh_src_count)) . ')';
+                if (isset($wmh_src['unit']) && $wmh_src['unit'] === 'fields') {
+                    $wmh_field_labels[] = $wmh_src_text;
+                } else {
+                    $wmh_value_labels[] = $wmh_src_text;
+                }
+            }
+        ?>
+            <div class="notice notice-warning wmh-notice-compat mb-0">
                 <p>
-                    <span class="wmh-notice-icon"><i class="fa-solid fa-puzzle-piece"></i></span>
-                    <b><?php _e('Premium plugins detected.', MEDIA_HYGIENE); ?></b>
-                    <?php _e('The free version may not detect unused media inside these plugins. Upgrade to', MEDIA_HYGIENE); ?>
-                    <a href="https://mediahygiene.com/pricing/" target="_blank"><?php _e('Media Hygiene Pro', MEDIA_HYGIENE); ?></a>
-                    <?php _e('for full compatibility:', MEDIA_HYGIENE); ?>
+                    <span class="wmh-notice-icon"><i class="fa-solid fa-triangle-exclamation"></i></span>
+                    <?php if (!empty($wmh_value_labels)) { ?>
+                        <b><?php
+                            printf(
+                                /* translators: %s: number of references */
+                                esc_html(_n(
+                                    'This scan could not read %s media reference.',
+                                    'This scan could not read %s media references.',
+                                    $wmh_unreadable['total'],
+                                    MEDIA_HYGIENE
+                                )),
+                                esc_html(number_format_i18n($wmh_unreadable['total']))
+                            );
+                        ?></b>
+                        <?php
+                        printf(
+                            /* translators: %s: plugin names with counts */
+                            esc_html__('They are stored by %s, where the free scan does not reach. The free version reads posts and pages, so media held as plugin field values, or attached to other content types such as store products, is not counted as in use.', MEDIA_HYGIENE),
+                            implode(', ', $wmh_value_labels)
+                        );
+                        ?>
+                    <?php } ?>
+                    <?php if (!empty($wmh_field_labels)) { ?>
+                        <b><?php
+                            esc_html_e('Some media on this site is stored where the free version cannot read it.', MEDIA_HYGIENE);
+                        ?></b>
+                        <?php
+                        printf(
+                            /* translators: %s: plugin names with the number of media fields set up */
+                            esc_html__('This site has media fields set up in %s, and the free version cannot follow what is saved in them.', MEDIA_HYGIENE),
+                            implode(', ', $wmh_field_labels)
+                        );
+                        ?>
+                    <?php } ?>
+                    <?php esc_html_e('Files used only in those places appear in the unused list below and look safe to remove. Check them against your site before deleting anything.', MEDIA_HYGIENE); ?>
+                    <a href="<?php echo wmh_site_link('features', 'notice-unreadable'); ?>" target="_blank"><?php esc_html_e('See how Media Hygiene Pro reads these.', MEDIA_HYGIENE); ?></a>
                 </p>
-                <?php echo $pro_plugin_list_html; ?>
+            </div>
+        <?php }
+        /* No branch for "a supported plugin is present but we counted nothing".
+         *
+         * That state used to print "We found no unreadable references on this
+         * site, so your results are most likely complete." It was removed
+         * deliberately, and it should not be added back.
+         *
+         * Counting nothing is not the same as there being nothing. The counters
+         * above read what is stored in the database: ACF field DEFINITIONS, and
+         * saved values for the others. Media can sit outside every one of them.
+         * ACF field groups registered in theme or plugin code with
+         * acf_add_local_field_group(), and groups kept as acf-json files in the
+         * theme, never reach the posts table, so a site built entirely that way
+         * counts zero and is not covered at all. Rendered output, shortcodes and
+         * dynamic tags are not followed either.
+         *
+         * So a zero count means "we found no gap we know how to measure", which
+         * is a statement about our counters, not about the site. Printing it as
+         * reassurance puts a completeness claim directly above a delete list,
+         * which is the one place a wrong answer costs the user a live file.
+         *
+         * Showing nothing is correct here: the gap notices above fire when there
+         * is something real to report, and silence carries no claim either way. */
+        ?>
+
+        <!-- Scan completeness: report items the scan had to skip -->
+        <?php
+        $wmh_skipped_posts = (int) get_option('wmh_scan_skipped_posts', 0);
+        $wmh_skipped_atts  = (int) get_option('wmh_scan_skipped_attachments', 0);
+        if ($wmh_skipped_posts > 0 || $wmh_skipped_atts > 0) { ?>
+            <div class="notice notice-warning wmh-notice-skipped mb-0">
+                <p>
+                    <span class="wmh-notice-icon"><i class="fa-solid fa-circle-exclamation"></i></span>
+                    <b><?php _e('Your last scan was not complete.', MEDIA_HYGIENE); ?></b>
+                    <?php
+                    if ($wmh_skipped_posts > 0) {
+                        printf(
+                            esc_html(_n(
+                                /* "item" rather than "page or post": the scan now also
+                                   renders block theme templates and reusable blocks,
+                                   and any of those can be the one that failed */
+                                '%s item could not be read. ',
+                                '%s items could not be read. ',
+                                $wmh_skipped_posts,
+                                MEDIA_HYGIENE
+                            )),
+                            esc_html(number_format_i18n($wmh_skipped_posts))
+                        );
+                    }
+                    if ($wmh_skipped_atts > 0) {
+                        printf(
+                            esc_html(_n(
+                                '%s media file could not be checked. ',
+                                '%s media files could not be checked. ',
+                                $wmh_skipped_atts,
+                                MEDIA_HYGIENE
+                            )),
+                            esc_html(number_format_i18n($wmh_skipped_atts))
+                        );
+                    }
+                    _e('This usually means a plugin or theme error while the scan was running. Media used only on those items may be listed as unused, so review carefully before deleting, then run the scan again.', MEDIA_HYGIENE);
+                    ?>
+                </p>
             </div>
         <?php } ?>
 

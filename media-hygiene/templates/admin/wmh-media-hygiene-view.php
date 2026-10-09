@@ -244,6 +244,13 @@ class wmh_media_hygiene_view extends WP_List_Table
         $wmh_general->fn_wmh_get_template('wmh-heading-and-notice-view.php');
     }
 
+    /* post-scan review request */
+    public function fn_wmh_review_request()
+    {
+        $wmh_general = new wmh_general();
+        $wmh_general->fn_wmh_get_template('wmh-review-request-view.php');
+    }
+
     /* dashboard html, including general summary and media breakdown and notice. */
     public function fn_wmh_dashboard_html()
     {
@@ -484,7 +491,7 @@ class wmh_media_hygiene_view extends WP_List_Table
             );
         } elseif ($type === 'whitelist') {
             $actions = array(
-                'blacklist' => esc_html(__('Blacklist', MEDIA_HYGIENE))
+                'blacklist' => esc_html(__('Remove From Whitelist', MEDIA_HYGIENE))
             );
         } elseif ($type === 'trash') {
             $actions = array(
@@ -656,7 +663,7 @@ class wmh_media_hygiene_view extends WP_List_Table
                 $where_values[] = $not_mime;
             }
         }
-        /* 'all' / '' — no mime filter */
+        /* 'all' / '', no mime filter */
 
         if ($date !== '') {
             $where_parts[]  = "{$date_col} LIKE %s";
@@ -781,6 +788,7 @@ $wmh_media_hygiene_view->fn_wmh_header_view();
 $wmh_media_hygiene_view->fn_wmh_first_load();
 $wmh_media_hygiene_view->fn_wmh_heading_and_notice();
 if ($type === 'blacklist') {
+    $wmh_media_hygiene_view->fn_wmh_review_request();
     $wmh_media_hygiene_view->fn_wmh_new_media_added_info();
     $wmh_media_hygiene_view->fn_wmh_dashboard_html();
     $wmh_media_hygiene_view->fn_wmh_scan_button_html();

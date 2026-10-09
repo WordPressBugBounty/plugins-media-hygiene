@@ -154,9 +154,9 @@ if ( isset( $media_type_info[0]['media_type_name'] ) ) {
 						<div class="wmh-lo-row wmh-lo-empty">
 							<i class="fa-solid <?php echo esc_attr( $d['icon'] ); ?> wmh-lo-icon"></i>
 							<span class="wmh-lo-cat"><?php echo esc_html( $d['label'] ); ?></span>
-							<span class="wmh-lo-cnt">—</span>
+							<span class="wmh-lo-cnt">-</span>
 							<div class="wmh-lo-bar"><div class="wmh-lo-fill" style="width:0%"></div></div>
-							<span class="wmh-lo-pct">—</span>
+							<span class="wmh-lo-pct">-</span>
 						</div>
 						<?php
 					}

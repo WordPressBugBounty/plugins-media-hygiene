@@ -1,4 +1,7 @@
 <?php
+
+defined('ABSPATH') or die('Plugin file cannot be accessed directly.');
+
 /* Hedaer view */
 $wmh_general = new wmh_general();
 $wmh_general->fn_wmh_get_template('wmh-header-view.php');
@@ -11,7 +14,7 @@ $wmh_general->fn_wmh_get_template('wmh-header-view.php');
             <div class="card-body pl-0 pr-0">
                 <h4 class="card-title"><?php _e('Need Expert Support?', MEDIA_HYGIENE); ?></h4>
                 <p class="card-text"><?php _e('Our EXPERTS would like to assist you for your query and any customization.', MEDIA_HYGIENE); ?></p>
-                <a href="https://www.mediahygiene.com/pricing/" class="button button-primary wmh-btn"><?php _e('Contact Support', MEDIA_HYGIENE); ?></a>
+                <a href="<?php echo wmh_site_link('pricing', 'help-support'); ?>" target="_blank" class="button button-primary wmh-btn"><?php _e('Contact Support', MEDIA_HYGIENE); ?></a>
             </div>
         </div>
     </div>
@@ -62,7 +65,7 @@ $wmh_general->fn_wmh_get_template('wmh-header-view.php');
             <i class="fa-solid fa-question display-3"></i>
             <div class="card-body pl-0 pr-0">
                 <h4 class="card-title"><?php _e("FAQ", MEDIA_HYGIENE); ?></h4>
-                <a href="https://mediahygiene.com/faq/" class="button mt-3 button-primary wmh-btn" target="_blank"><?php _e("Check", MEDIA_HYGIENE); ?></a>
+                <a href="<?php echo wmh_site_link('faq', 'help-faq'); ?>" class="button mt-3 button-primary wmh-btn" target="_blank"><?php _e("Check", MEDIA_HYGIENE); ?></a>
             </div>
         </div>
     </div>

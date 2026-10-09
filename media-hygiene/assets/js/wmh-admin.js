@@ -1,28 +1,39 @@
 jQuery(document).ready(function () {
 
-    /* ── Trash success notice — shown after page reload ── */
+    /* Trash success notice, shown after page reload */
     var wmhTrashNotice = sessionStorage.getItem('wmh_trash_notice');
     if (wmhTrashNotice) {
-        sessionStorage.removeItem('wmh_trash_notice');
         try {
             var nd = JSON.parse(wmhTrashNotice);
-            var banner = jQuery(
-                '<div class="wmh-trash-success-notice" role="alert">' +
-                '<span class="wmh-tsn-icon"><i class="fa-solid fa-trash-can-arrow-up"></i></span>' +
-                '<div class="wmh-tsn-body">' +
-                '<strong>' + nd.message + '</strong>' +
-                '<p>These files are now in the <strong>WordPress Trash</strong> — nothing has been permanently deleted from your site yet. ' +
-                'Please review your site to confirm everything looks correct. ' +
-                'If any image was moved to trash by mistake, restore it from <a href="?page=wmh-media-hygiene&type=trash" target="_blank">Media Library &rsaquo; Trash</a>. ' +
-                'Once you are satisfied, empty the trash to permanently free up the space.</p>' +
-                '</div>' +
-                '<button class="wmh-tsn-close" aria-label="Dismiss"><i class="fa-solid fa-xmark"></i></button>' +
-                '</div>'
-            );
-            banner.find('.wmh-tsn-close').on('click', function () {
-                banner.fadeOut(200, function () { banner.remove(); });
-            });
-            jQuery('.wmh-container').first().prepend(banner);
+            /* .wmh-container exists only on the unused-list tab, so on the
+               Trash tab this used to prepend into an empty set and vanish
+               without a word. .row-main is emitted on every tab. */
+            var host = jQuery('.wmh-container').first();
+            if (!host.length) { host = jQuery('.row-main').first(); }
+            if (host.length) {
+                var banner = jQuery('<div class="wmh-trash-success-notice" role="alert"></div>');
+                jQuery('<span class="wmh-tsn-icon"></span>')
+                    .append('<i class="fa-solid fa-trash-can-arrow-up"></i>')
+                    .appendTo(banner);
+                var body = jQuery('<div class="wmh-tsn-body"></div>').appendTo(banner);
+                /* .text(), not string interpolation: the message comes from
+                   the server and is placed as text, never parsed as HTML. */
+                jQuery('<strong></strong>').text(nd.message || '').appendTo(body);
+                var wmhTsnBody = (typeof wmhObj !== 'undefined' && wmhObj.msg_array)
+                    ? (wmhObj.msg_array.trash_page_notice_body || '') : '';
+                if (wmhTsnBody) { jQuery('<p></p>').text(wmhTsnBody).appendTo(body); }
+                jQuery('<button class="wmh-tsn-close"></button>')
+                    .attr('aria-label', 'Dismiss')
+                    .append('<i class="fa-solid fa-xmark"></i>')
+                    .on('click', function () {
+                        banner.fadeOut(200, function () { banner.remove(); });
+                    })
+                    .appendTo(banner);
+                host.prepend(banner);
+                /* Cleared only once it is actually on screen. Clearing it
+                   first meant a failed render destroyed the message. */
+                sessionStorage.removeItem('wmh_trash_notice');
+            }
         } catch (e) { }
     }
 
@@ -51,8 +62,9 @@ jQuery(document).ready(function () {
     /* Add placeholder attr in wp list table search */
     jQuery('.search-box #search_post_id-search-input').attr('placeholder', 'Search by id/name/type');
 
-    /* go pro link target blank */
-    jQuery('#go-pro-link').parent().attr('target', '_blank');
+    /* The Go Pro menu row is gone, so #go-pro-link no longer exists and this
+       is why the line that opened it in a new tab went with it. Every other
+       Pro link sets target in its own markup. */
 
     /* delete media list */
     fnWmhDeletedMEdiaList();
@@ -110,7 +122,7 @@ function fnWmhScanError(message) {
     jQuery('.scan-data-status').css('display', 'none');
     jQuery('.notice.notice-scan').css('display', 'block')
         .removeClass('notice-success').addClass('notice-error')
-        .find('p').text(message || 'Scan failed — please try again or check the server error log.');
+        .find('p').text(message || 'Scan failed. Please try again or check the server error log.');
 }
 
 /* scan ajax call function. */
@@ -161,8 +173,8 @@ function fnWmhScanAttachment(data) {
         },
         error: function (xhr, status, error) {
             var msg = status === 'timeout'
-                ? 'The scan timed out (step 1/4). Your server\'s PHP max_execution_time may be too low — increase it in php.ini or contact your hosting provider.'
-                : 'Scan connection error (step 1/4) — ' + status + (error ? ': ' + error : '') + '. Please try again or check the server error log.';
+                ? 'The scan timed out (step 1/4). Your server\'s PHP max_execution_time may be too low: increase it in php.ini or contact your hosting provider.'
+                : 'Scan connection error (step 1/4): ' + status + (error ? ': ' + error : '') + '. Please try again or check the server error log.';
             fnWmhScanError(msg);
         }
     });
@@ -219,8 +231,8 @@ function fnFetchDataFromDatabase(fetchDataAjaxCall = '', fetchDataProgressBar = 
         },
         error: function (xhr, status, error) {
             var msg = status === 'timeout'
-                ? 'The scan timed out (step 2/4). Your server\'s PHP max_execution_time may be too low — increase it in php.ini or contact your hosting provider.'
-                : 'Scan connection error (step 2/4) — ' + status + (error ? ': ' + error : '') + '. Please try again or check the server error log.';
+                ? 'The scan timed out (step 2/4). Your server\'s PHP max_execution_time may be too low: increase it in php.ini or contact your hosting provider.'
+                : 'Scan connection error (step 2/4): ' + status + (error ? ': ' + error : '') + '. Please try again or check the server error log.';
             fnWmhScanError(msg);
         }
     });
@@ -261,8 +273,8 @@ function fnSpecialProcessForElementor(ajax_call = '', elementor_ajax_call = '', 
         },
         error: function (xhr, status, error) {
             var msg = status === 'timeout'
-                ? 'The scan timed out (Elementor/step 2/4). Your server\'s PHP max_execution_time may be too low — increase it in php.ini or contact your hosting provider.'
-                : 'Scan connection error (Elementor/step 2/4) — ' + status + (error ? ': ' + error : '') + '. Please try again or check the server error log.';
+                ? 'The scan timed out (Elementor/step 2/4). Your server\'s PHP max_execution_time may be too low: increase it in php.ini or contact your hosting provider.'
+                : 'Scan connection error (Elementor/step 2/4): ' + status + (error ? ': ' + error : '') + '. Please try again or check the server error log.';
             fnWmhScanError(msg);
         }
     });
@@ -315,8 +327,8 @@ function fnScanningDataAjaxCall(scanningDataAjaxCall = '', progressBar = '') {
         },
         error: function (xhr, status, error) {
             var msg = status === 'timeout'
-                ? 'The scan timed out (step 3/4). Your server\'s PHP max_execution_time may be too low — increase it in php.ini or contact your hosting provider.'
-                : 'Scan connection error (step 3/4) — ' + status + (error ? ': ' + error : '') + '. Please try again or check the server error log.';
+                ? 'The scan timed out (step 3/4). Your server\'s PHP max_execution_time may be too low: increase it in php.ini or contact your hosting provider.'
+                : 'Scan connection error (step 3/4): ' + status + (error ? ': ' + error : '') + '. Please try again or check the server error log.';
             fnWmhScanError(msg);
         }
     });
@@ -355,7 +367,20 @@ function fnFetchStatisticsData(statisticsAjaxCall = '') {
                 fnFetchStatisticsData(ajax_call);
             } else if (res.flg == '2') {
                 fnWmhScanResetButtons();
-                location.reload();
+                /* Land at the TOP of the page.
+                 *
+                 * A plain location.reload() makes the browser restore the
+                 * previous scroll position, and the scan button sits well
+                 * down the page. Someone who clicked Scan and waited then
+                 * got a page that looked unchanged, because every figure
+                 * that had just been updated was above the fold. The scan
+                 * had finished correctly and did not look like it.
+                 *
+                 * Assigning to location reloads from the server and starts
+                 * at the top, so the counts and any coverage notice are the
+                 * first things on screen. */
+                window.scrollTo(0, 0);
+                window.location.assign(window.location.href.split('#')[0]);
             } else if (res.flg == '0') {
                 fnWmhScanError(res.message || 'Scan completed but statistics could not be saved.');
             } else {
@@ -364,8 +389,8 @@ function fnFetchStatisticsData(statisticsAjaxCall = '') {
         },
         error: function (xhr, status, error) {
             var msg = status === 'timeout'
-                ? 'The scan timed out (step 4/4). Your server\'s PHP max_execution_time may be too low — increase it in php.ini or contact your hosting provider.'
-                : 'Scan connection error (step 4/4) — ' + status + (error ? ': ' + error : '') + '. Please try again or check the server error log.';
+                ? 'The scan timed out (step 4/4). Your server\'s PHP max_execution_time may be too low: increase it in php.ini or contact your hosting provider.'
+                : 'Scan connection error (step 4/4): ' + status + (error ? ': ' + error : '') + '. Please try again or check the server error log.';
             fnWmhScanError(msg);
         }
     });
@@ -375,6 +400,9 @@ function fnFetchStatisticsData(statisticsAjaxCall = '') {
 
 /* row action - trash */
 function fn_wmh_row_action_trash(post_id = '', file_size = '') {
+    if (!confirm(wmhObj.msg_array.trash_confirm_single)) {
+        return;
+    }
     var data = {
         action: 'row_action_trash',
         post_id: post_id,
@@ -671,6 +699,14 @@ jQuery(document).on('click', '#doaction', function () {
         var chek_box_val = jQuery.map(jQuery('.single-check-image:checked'), function (n, i) {
             return n.value;
         });
+
+        /* One prompt. Trash is reversible, so this is a misclick guard
+           rather than a warning, and the count is what makes it useful:
+           selecting a whole page and meaning to select one is the mistake
+           worth catching. */
+        if (!confirm(wmhObj.msg_array.trash_confirm_bulk.replace('%d', chek_box_val.length))) {
+            return;
+        }
         var sizes = []
         /* get size*/
         jQuery('.single-check-image:checked').each(function () {
@@ -779,7 +815,8 @@ jQuery(document).on('click', '#doaction', function () {
                 }
                 if (res.flg == '1') {
                     alert(res.message);
-                    window.location.href = '?page=wmh-media-hygiene';
+                    /* restored files leave the Trash tab, so stay here to see it empty out */
+                    window.location.href = '?page=wmh-media-hygiene&type=trash';
                 } else if (res.flg == '-1' || res.flg == -1) {
                     alert('Restore error: ' + (res.message || 'Unknown error') + '\n\nPlease check the debug log.');
                 } else {
@@ -795,6 +832,21 @@ jQuery(document).on('click', '#doaction', function () {
         var chek_box_val = jQuery.map(jQuery('.single-check-image:checked'), function (n, i) {
             return n.value;
         });
+
+        /* Confirm twice before deleting permanently.
+         *
+         * This ran with no confirmation at all, while moving files to Trash
+         * asks twice. Trash is recoverable and this is not: the file, the
+         * database row and every generated thumbnail go, with no undo.
+         * The count goes in the first message so the scale is visible, and
+         * the second asks about the backup, which is the only thing that
+         * can bring these files back. */
+        if (!confirm(wmhObj.msg_array.delete_confirm_1.replace('%d', chek_box_val.length))) {
+            return;
+        }
+        if (!confirm(wmhObj.msg_array.delete_confirm_2)) {
+            return;
+        }
         var sizes = []
         /* get size*/
         jQuery('.single-check-image:checked').each(function () {
@@ -820,7 +872,8 @@ jQuery(document).on('click', '#doaction', function () {
                 }
                 if (res.flg == 1) {
                     alert(res.message);
-                    window.location.href = '?page=wmh-media-hygiene';
+                    /* permanently deleted files are not in the unused list, so do not go there */
+                    window.location.href = '?page=wmh-media-hygiene&type=trash';
                 } else if (res.flg == -1) {
                     alert('Error: ' + (res.message || 'Unknown error') + '\n\nPlease check the debug log.');
                 } else {
@@ -890,7 +943,7 @@ jQuery("#mh-analytics-switch").on('change', function (e) {
     });
 });
 
-/* opt-in notice — Allow button */
+/* opt-in notice, Allow button */
 jQuery(document).on('click', '#wmh-optin-allow', function (e) {
     e.preventDefault();
     jQuery('.wmh-optin-loader').css('display', 'inline-block');
@@ -903,7 +956,7 @@ jQuery(document).on('click', '#wmh-optin-allow', function (e) {
     });
 });
 
-/* opt-in notice — No Thanks button */
+/* opt-in notice, No Thanks button */
 jQuery(document).on('click', '#wmh-optin-decline', function (e) {
     e.preventDefault();
     jQuery('.wmh-optin-loader').css('display', 'inline-block');
@@ -1140,6 +1193,14 @@ function fnWmhBulkTrashRestore(data) {
             var res = JSON.parse(res);
             var progressBar = res.progress_bar;
             jQuery('.wmh-bulk-restore-progress-bar div').text(progressBar + '%').css('width', progressBar + '%');
+            /* Keep the wording in step with the bar. It was written once in
+               beforeSend as "Restoring ... (1/2)" and never touched again, so
+               it still read 1/2 at the end of a longer run. */
+            if (res.total_ajax_call) {
+                var shown = Math.min(res.ajax_call || 1, res.total_ajax_call);
+                jQuery('.wmh-bulk-restore-message').text(
+                    progressBar >= 100 ? 'Finishing ...' : 'Restoring ... (' + shown + '/' + res.total_ajax_call + ')');
+            }
             if (res.flg == 0) {
                 alert(res.message);
                 location.reload();
@@ -1149,14 +1210,33 @@ function fnWmhBulkTrashRestore(data) {
                 var data = jQuery('#wmh-bulk-restore-form').serialize();
                 fnWmhBulkTrashRestore(data);
             } else if (res.flg == 2) {
-                alert(res.message);
-                window.location.href = '?page=wmh-media-hygiene';
+                /* alert() blocks the main thread, so calling it here would
+                   freeze the screen on the PREVIOUS paint: the user saw the
+                   last batch's bar, 62.50%, beside the final success message
+                   and reasonably read that as the restore having stopped
+                   early. Hand the browser a frame to paint 100% first. */
+                jQuery('.wmh-bulk-restore-message').text('Restoring ... (done)');
+                setTimeout(function () {
+                    alert(res.message);
+                    /* Reload the Trash tab rather than jumping to the unused
+                       list. The counts on this page were rendered before the
+                       run and are stale by the time we finish, so leaving
+                       them on screen is what made a completed restore look
+                       like it had done nothing. Coming back here empty is
+                       the confirmation. */
+                    window.location.href = '?page=wmh-media-hygiene&type=trash';
+                }, 400);
             }
         },
     });
 }
 
 function fn_wmh_delete_permanently_single_image(post_id = '', file_size = '') {
+    /* Same reasoning as the bulk version: this is the one action with no
+       undo, and it had no confirmation. */
+    if (!confirm(wmhObj.msg_array.delete_confirm_single)) {
+        return;
+    }
     var data = {
         action: 'delete_permanently_single_image_call',
         post_id: post_id,
@@ -1199,6 +1279,17 @@ function fn_wmh_delete_permanently_single_image(post_id = '', file_size = '') {
 /* delete permanently */
 jQuery(document).on('click', '#wmh-delete-permanently-btn', function (e) {
     e.preventDefault();
+
+    /* This empties Trash COMPLETELY, not a page at a time, and it ran with
+       no confirmation at all. It is the most destructive thing in the
+       plugin, so it asks twice like the bulk delete does. */
+    if (!confirm(wmhObj.msg_array.delete_confirm_all)) {
+        return;
+    }
+    if (!confirm(wmhObj.msg_array.delete_confirm_all_2)) {
+        return;
+    }
+
     var data = jQuery('#wmh-delete-permanently-form').serialize();
     fnWmhBulkDeletePermanently(data);
 });
@@ -1234,8 +1325,16 @@ function fnWmhBulkDeletePermanently(data) {
                 var next = jQuery('#wmh-delete-permanently-form').serialize();
                 fnWmhBulkDeletePermanently(next);
             } else if (res.flg == 2) {
-                alert(res.message);
-                window.location.href = '?page=wmh-media-hygiene';
+                /* Paint the finished bar before alert() freezes the thread,
+                   or the last thing on screen is the previous batch's
+                   percentage next to a message saying it is done. */
+                setTimeout(function () {
+                    alert(res.message);
+                    /* Back to the Trash tab, which is now empty. The counts on
+                       this page are stale by the time we finish, so returning
+                       here is what shows the user it actually worked. */
+                    window.location.href = '?page=wmh-media-hygiene&type=trash';
+                }, 400);
             } else if (res.flg == -1) {
                 jQuery('.bulk-delete-permanently-loader').css('display', 'none');
                 jQuery('#wmh-delete-permanently-btn').prop('disabled', false);

@@ -898,8 +898,25 @@ ul.wmh-compatibility-notice li {
     padding-top: 4px;
 }
 
-/* Pro upgrade banner */
+/* What free reads, above the compatibility table. Plain text on purpose:
+   it is the answer to the question the tab was opened with, and boxing it
+   would make it compete with the Pro banner underneath. */
+.wmh-compat-intro {
+    margin: 0 0 16px;
+    max-width: 90ch;
+    line-height: 1.6;
+    color: #3c434a;
+}
+
+.wmh-compat-intro strong {
+    display: inline-block;
+    margin-bottom: 2px;
+    color: #1d2327;
+}
+
+/* Pro upgrade banner. Follows the table now rather than opening the tab. */
 .wmh-pro-banner {
+    margin-top: 20px;
     display: -webkit-box;
     display: -ms-flexbox;
     display: flex;
@@ -1022,6 +1039,22 @@ ul.wmh-compatibility-notice li {
     background: #f0f6ff;
 }
 
+/* optional qualifier under a tick, for a tool that is only partly read.
+ * No row uses it right now, kept so a partial tick stays possible. */
+.wmh-compat-note {
+    display: block;
+    font-size: 11px;
+    line-height: 1.4;
+    color: #646970;
+    margin-top: 2px;
+    white-space: nowrap;
+}
+
+/* separates the tools the free version reads from the Pro only ones */
+.wmh-compat-table tr.wmh-compat-free-end td {
+    border-bottom: 2px solid #dcdcde;
+}
+
 .wmh-compat-yes {
     color: #028000;
     font-size: 15px;
@@ -1030,6 +1063,23 @@ ul.wmh-compatibility-notice li {
 .wmh-compat-no {
     color: #b20a0a;
     font-size: 15px;
+}
+
+/* Unreadable-reference and incomplete-scan notices carry a real number,
+   so give them a little more presence than a plain notice. */
+.wmh-notice-skipped p,
+.wmh-notice-compat p {
+    line-height: 1.6;
+}
+
+.wmh-compat-scope-note {
+    margin: 14px 0 0;
+    padding: 12px 14px;
+    background: #f6f7f7;
+    border-left: 3px solid #dcdcde;
+    font-size: 13px;
+    line-height: 1.6;
+    color: #50575e;
 }
 
 /* System info table */
@@ -1717,6 +1767,29 @@ a#restore-default-file-exe {
     right: 0;
     margin-left: 0;
     transform: none;
+}
+
+/* Bridge the 8px gap between the trigger and the panel.
+ *
+ * Without this the panel is visible but unusable: it is shown only while
+ * .tooltip-1 is hovered, and the pointer has to cross 8px of dead space to
+ * reach the Upgrade link inside it, which closes the panel on the way. The
+ * pad is a child of the panel, which is itself inside .tooltip-1, so
+ * covering the gap keeps the pointer within the hover region and the panel
+ * stays open long enough to click the link.
+ *
+ * A :hover rule on the panel would not work: it is display:none until the
+ * trigger is hovered, and a display:none element cannot be hovered. */
+.wmh-button-form .tooltip-1 .right::before,
+.wmh-download-page-media .tooltip-1 .right::before,
+.wmh-trash-page-media .tooltip-1 .right::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 100%;
+    height: 10px;
+    background: transparent;
 }
 
 /* Hide the left-facing arrow (was for right-side popup) */

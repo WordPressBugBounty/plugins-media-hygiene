@@ -15,7 +15,12 @@ $all_plugins = get_plugins();
 /* get scan option data. */
 $wmh_scan_option_data = get_option('wmh_scan_option_data');
 
-if (isset($wmh_scan_option_data) && !empty($wmh_scan_option_data) && $wmh_scan_option_data['delete_data_on_uninstall_plugin'] == 'on') {
+/* isset on the key itself, not just the array: a site that saved settings
+ * before this option existed has the array without the key, and reading it
+ * raised a PHP warning in the middle of an uninstall. */
+if (!empty($wmh_scan_option_data)
+    && isset($wmh_scan_option_data['delete_data_on_uninstall_plugin'])
+    && $wmh_scan_option_data['delete_data_on_uninstall_plugin'] == 'on') {
 
     if (!array_key_exists('media-hygiene-pro/media-hygiene-pro.php', $all_plugins)) {
 
@@ -47,7 +52,7 @@ if (isset($wmh_scan_option_data) && !empty($wmh_scan_option_data) && $wmh_scan_o
         $wmh_save_scan_content = $wpdb->prefix . 'wmh_save_scan_content';
         $wpdb->query("DROP TABLE IF EXISTS " . $wmh_save_scan_content);
 
-        /* drop wmh_scan_known_used — dashboard scan known-used index table */
+        /* drop wmh_scan_known_used, dashboard scan known-used index table */
         $wpdb->query("DROP TABLE IF EXISTS " . $wpdb->prefix . 'wmh_scan_known_used');
 
         /* remove from option */
@@ -112,8 +117,22 @@ if (isset($wmh_scan_option_data) && !empty($wmh_scan_option_data) && $wmh_scan_o
         delete_option('wmh_exclude_directory');
         delete_option('wmh_close_analytics_permission_permanently');
         delete_option('wmh_analytics_consent_explicit');
+        delete_option('wmh_review_request_dismissed');
         delete_option('wmh_plugin_db_version');
         delete_option('wmh_plugin_db_version_upgrade');
+
+        /* remove cached counts. The key carries the plugin version, so an
+         * uninstall has to clear whatever versions this site has run, not just
+         * the current one. The pre-6.1.0 key had no version in it at all. */
+        delete_transient('wmh_unreadable_reference_counts');
+        $wmh_cached_counts = $wpdb->get_col(
+            "SELECT option_name FROM {$wpdb->options}
+             WHERE option_name LIKE '\_transient\_wmh\_unreadable\_refs\_%'
+                OR option_name LIKE '\_transient\_timeout\_wmh\_unreadable\_refs\_%'"
+        );
+        foreach ((array) $wmh_cached_counts as $wmh_cached_count) {
+            delete_option($wmh_cached_count);
+        }
 
         /* remove scheduled hook */
         wp_clear_scheduled_hook('fn_mh_daily_cron_job');

@@ -1,11 +1,103 @@
+/* Every rule here also sets background-image: none.
+ *
+ * A jQuery UI theme from another plugin (UpdraftPlus on one live site)
+ * styles .ui-button with the background SHORTHAND, which carries a
+ * background-image. Our !important sat on background-color only, so the
+ * image painted straight over our blue and the white label vanished into
+ * a pale tile. getComputedStyle still reported our colour, which is why
+ * the button looked broken while every colour check said it was fine.
+ *
+ * Any plugin shipping a jQuery UI theme can do this, so the guard lives
+ * on our rules rather than targeting one plugin. */
 .wmh-plugin-deactive-btn {
     background-color: #2271b1 !important;
+    background-image: none !important;
     color: #ffffff !important;
     border: none !important;
 }
 
+/* Skip is the way out, not the primary action. It sends nothing, so it should
+   not compete with Deactivate for attention: same position, less weight. */
+#wmh-skip-and-deactive.wmh-plugin-deactive-btn {
+    background-color: transparent !important;
+    background-image: none !important;
+    color: #646970 !important;
+    border: 1px solid #c3c4c7 !important;
+}
+
+#wmh-skip-and-deactive.wmh-plugin-deactive-btn:hover {
+    color: #1d2327 !important;
+    border-color: #8c8f94 !important;
+}
+
+/* Core's dialog CSS sets .ui-button:disabled { color:#a7aaad; background:
+   #f6f7f7 } with !important. That is class + pseudo-class, so it beats a
+   bare class of ours even with !important, and the label came out pale
+   grey on near-white: roughly 2:1 contrast, effectively unreadable.
+
+   A disabled button still has to be readable. The user needs the label
+   to know what filling the form in would do. So match core's specificity
+   and use a muted BLUE rather than grey on grey. Measured 3.67:1 against
+   white, so it passes WCAG AA for UI text where core managed 2.17:1. No
+   opacity on top, which was compounding the problem. */
+.ui-dialog .wmh-plugin-deactive-btn.ui-state-disabled,
+.ui-dialog .wmh-plugin-deactive-btn[disabled],
+.ui-dialog .wmh-plugin-deactive-btn:disabled {
+    background-color: #6589ab !important;
+    background-image: none !important;
+    color: #ffffff !important;
+    border-color: #6589ab !important;
+    text-shadow: none !important;
+    box-shadow: none !important;
+    opacity: 1 !important;
+    cursor: default !important;
+}
+
+/* Same specificity problem for the enabled state, so state it at the
+   same weight rather than relying on !important alone. */
+.ui-dialog .wmh-plugin-deactive-btn {
+    background-color: #2271b1 !important;
+    background-image: none !important;
+    color: #ffffff !important;
+    border-color: #2271b1 !important;
+    text-shadow: none !important;
+    box-shadow: none !important;
+}
+
+.ui-dialog .wmh-plugin-deactive-btn:hover:not(:disabled):not(.ui-state-disabled) {
+    background-color: #135e96 !important;
+    background-image: none !important;
+    border-color: #135e96 !important;
+}
+
+/* Skip keeps its quieter treatment, restated at the higher specificity
+   so core's .ui-button rules do not take it back. */
+.ui-dialog #wmh-skip-and-deactive.wmh-plugin-deactive-btn {
+    background-color: transparent !important;
+    background-image: none !important;
+    color: #646970 !important;
+    border: 1px solid #c3c4c7 !important;
+    text-shadow: none !important;
+    box-shadow: none !important;
+}
+
+.ui-dialog #wmh-skip-and-deactive.wmh-plugin-deactive-btn.ui-state-disabled,
+.ui-dialog #wmh-skip-and-deactive.wmh-plugin-deactive-btn:disabled {
+    color: #a7aaad !important;
+    border-color: #dcdcde !important;
+    background-color: transparent !important;
+    background-image: none !important;
+}
+
+/* No overflow rule here on purpose. The dialog runs with height:'auto' and a
+   maxHeight, and jQuery UI sets overflow on the content pane itself to match.
+   This used to be overflow:hidden !important, which clipped the consent
+   checkbox and the buttons out of reach instead of letting them scroll, and
+   any rule here overrides what the widget works out. Only stop the form from
+   pushing the dialog sideways. */
 #wmh-feedback-modal {
-	overflow: hidden !important;
+	overflow-x: hidden;
+	box-sizing: border-box;
 }
 
 .wmh-deactive-loader-div {

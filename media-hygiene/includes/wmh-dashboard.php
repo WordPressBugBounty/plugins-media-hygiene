@@ -42,6 +42,30 @@ class wmh_dashboard
 
         /* update database by version */
         add_action('wp_ajax_database_update_wmh_by_version', array($this, 'fn_wmh_database_update_wmh_by_version'));
+
+        /* dismiss the post-scan review request */
+        add_action('wp_ajax_wmh_dismiss_review_request_action', array($this, 'fn_wmh_dismiss_review_request_action'));
+    }
+
+    /**
+     * Permanently dismiss the review request notice.
+     *
+     * Fired when the user leaves a review, clicks "Maybe later", or dismisses
+     * the notice with the core X. Asking once is the point: a repeated ask
+     * costs goodwill and earns one-star reviews rather than five-star ones.
+     */
+    public function fn_wmh_dismiss_review_request_action()
+    {
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error(null, 403);
+        }
+
+        if (!isset($_POST['nonce']) || !wp_verify_nonce(sanitize_text_field($_POST['nonce']), 'wmh_review_request_nonce')) {
+            wp_send_json_error(null, 403);
+        }
+
+        update_option('wmh_review_request_dismissed', 'Yes', 'no');
+        wp_send_json_success();
     }
 
     public function fn_wmh_fetch_statistics_data()
@@ -200,7 +224,7 @@ class wmh_dashboard
         } else {
             echo json_encode([
                 'flg'     => -1,
-                'message' => 'Scan statistics could not be retrieved — the scan may not have completed successfully. Please run the scan again.',
+                'message' => __('Scan statistics could not be retrieved. The scan may not have completed successfully. Please run the scan again.', MEDIA_HYGIENE),
             ]);
             wp_die();
         }
@@ -412,7 +436,7 @@ class wmh_dashboard
         $message = __('Something is wrong', MEDIA_HYGIENE);
 
         if (isset($_POST['action']) && $_POST['action'] == 'wmh_aap_action') {
-            $updated = update_option('wmh_send_data_to_server_permission', 'off');
+            $updated = update_option('wmh_send_data_to_server_permission', 'off', false);
         }
 
         if ($updated) {
@@ -439,7 +463,7 @@ class wmh_dashboard
         }
 
         if (isset($_POST['action']) && $_POST['action'] == 'wmh_aap_close_notice_permanently_action') {
-            update_option('wmh_close_analytics_permission_permanently', 'Yes');
+            update_option('wmh_close_analytics_permission_permanently', 'Yes', false);
         }
         wp_die();
     }
@@ -656,10 +680,10 @@ class wmh_dashboard
 
         /* timeframse option value update */
         if (!isset($wmh_scan_option_data['wmh_timeframes'])) {
-            $wmh_scan_option_data['wmh_timeframes'] = "quarterly";
+            $wmh_scan_option_data['wmh_timeframes'] = "monthly";
         }
 
-        update_option('wmh_scan_option_data', $wmh_scan_option_data);
+        update_option('wmh_scan_option_data', $wmh_scan_option_data, false);
 
         /* delete option */
         update_option('wmh_plugin_db_version_upgrade', '1', 'no');

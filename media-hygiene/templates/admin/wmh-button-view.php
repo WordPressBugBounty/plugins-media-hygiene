@@ -1,5 +1,8 @@
 <?php
 
+defined('ABSPATH') or die('Plugin file cannot be accessed directly.');
+
+
 global $wpdb;
 $wmh_unused_media_post_id = $wpdb->prefix . MH_PREFIX . 'unused_media_post_id';
 $filter_data = '';
@@ -147,9 +150,9 @@ $wmh_plugin_db_version_upgrade = get_option('wmh_plugin_db_version_upgrade');
                         <span class="tooltip-1"><i class="fa-solid fa-circle-question"></i>
                             <span class="right">
                                 <p>
-                                    <?php _e('Two types of scans: Regular (Free) and Deep (Pro version)', MEDIA_HYGIENE); ?>
+                                    <?php _e('Pro adds Scan in Background, so a large library keeps scanning after you close the page, and Folder Scan, which finds files on the server that are not in your media library.', MEDIA_HYGIENE); ?>
                                 </p>
-                                <a href='https://www.mediahygiene.com/pricing/' target='_blank'><?php _e('Upgrade to Pro'); ?></a>
+                                <a href="<?php echo wmh_site_link('pricing', 'tooltip-deep-scan'); ?>" target='_blank'><?php _e('Upgrade to Pro', MEDIA_HYGIENE); ?></a>
                                 <i></i>
                             </span>
                         </span>
@@ -167,20 +170,20 @@ $wmh_plugin_db_version_upgrade = get_option('wmh_plugin_db_version_upgrade');
                             <?php if (isset($wmh_plugin_db_version_upgrade) && $wmh_plugin_db_version_upgrade == '1') { ?>
                                 <button type="submit" id="create-page-zip-button" class="button button-primary wmh-btn">
                                     <span class="wmh-btn-icon-slot"><i class="fa-solid fa-download wmh-btn-static-icon"></i></span>
-                                    <?php _e('Download Media', MEDIA_HYGIENE); ?>
+                                    <?php _e('Download Current Page Media', MEDIA_HYGIENE); ?>
                                 </button>
                             <?php } else { ?>
                                 <button type="submit" class="button button-primary wmh-btn update-database-msg-btn">
                                     <span class="wmh-btn-icon-slot"><i class="fa-solid fa-download wmh-btn-static-icon"></i></span>
-                                    <?php _e('Download Media', MEDIA_HYGIENE); ?>
+                                    <?php _e('Download Current Page Media', MEDIA_HYGIENE); ?>
                                 </button>
                             <?php } ?>
                             <span class="tooltip-1"><i class="fa-solid fa-circle-question"></i>
                                 <span class="right">
                                     <p>
-                                        <?php _e('Download media by page only (Free). Get the ONE SHOT download feature (Pro version)', MEDIA_HYGIENE); ?>
+                                        <?php _e('Pro adds Download All, which saves every unused file in one go instead of a page at a time.', MEDIA_HYGIENE); ?>
                                     </p>
-                                    <a href='https://www.mediahygiene.com/pricing/' target='_blank'><?php _e('Upgrade to Pro'); ?></a>
+                                    <a href="<?php echo wmh_site_link('pricing', 'tooltip-download'); ?>" target='_blank'><?php _e('Upgrade to Pro', MEDIA_HYGIENE); ?></a>
                                     <i></i>
                                 </span>
                             </span>
@@ -208,9 +211,9 @@ $wmh_plugin_db_version_upgrade = get_option('wmh_plugin_db_version_upgrade');
                             <span class="tooltip-1"><i class="fa-solid fa-circle-question"></i>
                                 <span class="right">
                                     <p>
-                                        <?php _e('Delete media by page only (Free). Get the ONE SHOT delete feature (Pro version)', MEDIA_HYGIENE); ?>
+                                        <?php _e('Pro adds Trash All, which moves every unused file to trash in one go instead of a page at a time.', MEDIA_HYGIENE); ?>
                                     </p>
-                                    <a href='https://www.mediahygiene.com/pricing/' target='_blank'><?php _e('Upgrade to Pro'); ?></a>
+                                    <a href="<?php echo wmh_site_link('pricing', 'tooltip-delete'); ?>" target='_blank'><?php _e('Upgrade to Pro', MEDIA_HYGIENE); ?></a>
                                     <i></i>
                                 </span>
                             </span>

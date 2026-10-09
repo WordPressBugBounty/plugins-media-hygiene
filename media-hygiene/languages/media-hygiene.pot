@@ -1,0 +1,1222 @@
+# Copyright (C) 2026 Media Hygiene
+# This file is distributed under the GPLv2 or later.
+msgid ""
+msgstr ""
+"Project-Id-Version: Media Hygiene 6.1.0\n"
+"Report-Msgid-Bugs-To: https://mediahygiene.com/\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"POT-Creation-Date: 2026-09-21T11:40:29Z\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"X-Domain: media-hygiene\n"
+
+#: templates/admin/wmh-new-media-info-view.php:35
+msgid "%1$s file has been uploaded since your last scan on %2$s. Re-scan to find any that are unused."
+msgid_plural "%1$s files have been uploaded since your last scan on %2$s. Re-scan to find any that are unused."
+msgstr[0] ""
+msgstr[1] ""
+
+#: includes/wmh-my-cron-job.php:224
+msgid "%1$s new file on %2$s since your last scan"
+msgid_plural "%1$s new files on %2$s since your last scan"
+msgstr[0] ""
+msgstr[1] ""
+
+#: includes/wmh-scan.php:1478
+msgid "%d file(s) moved to Trash (%s freed from dashboard count)."
+msgstr ""
+
+#: templates/admin/wmh-heading-and-notice-view.php:261
+msgid "%s media file could not be checked. "
+msgid_plural "%s media files could not be checked. "
+msgstr[0] ""
+msgstr[1] ""
+
+#: templates/admin/wmh-button-view.php:111
+msgid "(scan completed)"
+msgstr ""
+
+#: templates/admin/wmh-button-view.php:113
+msgid "(scan interrupted)"
+msgstr ""
+
+#: templates/admin/wmh-error-log-view.php:56
+msgid ", then run a scan."
+msgstr ""
+
+#: templates/admin/wmh-settings-view.php:251
+msgid "10 - Media"
+msgstr ""
+
+#: templates/admin/wmh-settings-view.php:252
+msgid "15 - Links"
+msgstr ""
+
+#: templates/admin/wmh-settings-view.php:248
+msgid "2 - Dashboard"
+msgstr ""
+
+#: templates/admin/wmh-settings-view.php:253
+msgid "20 - Pages"
+msgstr ""
+
+#: templates/admin/wmh-settings-view.php:254
+msgid "25 - Comments"
+msgstr ""
+
+#: templates/admin/wmh-settings-view.php:249
+msgid "4 - Separator"
+msgstr ""
+
+#: templates/admin/wmh-settings-view.php:250
+msgid "5 - Posts"
+msgstr ""
+
+#: templates/admin/wmh-settings-view.php:255
+msgid "59 - Separator"
+msgstr ""
+
+#: templates/admin/wmh-settings-view.php:256
+msgid "60 - Appearance"
+msgstr ""
+
+#: templates/admin/wmh-settings-view.php:257
+msgid "65 - Plugins"
+msgstr ""
+
+#: templates/admin/wmh-settings-view.php:258
+msgid "70 - Users"
+msgstr ""
+
+#: templates/admin/wmh-settings-view.php:259
+msgid "75 - Tools"
+msgstr ""
+
+#: templates/admin/wmh-settings-view.php:260
+msgid "80 - Settings"
+msgstr ""
+
+#: templates/admin/wmh-settings-view.php:261
+msgid "99 - Separator"
+msgstr ""
+
+#: templates/admin/wmh-settings-view.php:461
+msgid "<strong>How to read this table.</strong> A tick in the free column means the free version reads that builder's saved content, including its templates, wherever it is used on your site. What the free version cannot do is read content that is only assembled when a page is displayed, such as shortcodes, dynamic tags and widget output, or media that plugins keep in their own custom fields and tables. Pro renders each page the way a visitor sees it before checking, and reads theme options, widgets and plugin fields as well."
+msgstr ""
+
+#: templates/admin/wmh-heading-and-notice-view.php:138
+msgid "A new scan is recommended after the recent database upgrade."
+msgstr ""
+
+#: includes/wmh-my-cron-job.php:352
+msgid "A quick look at what is new, so nothing piles up unnoticed."
+msgstr ""
+
+#: templates/admin/wmh-settings-view.php:512
+msgid "Active Theme"
+msgstr ""
+
+#: templates/admin/wmh-media-hygiene-view.php:407
+msgid "Add To Whitelist"
+msgstr ""
+
+#: includes/wmh-general.php:552
+msgid "Advanced Custom Fields"
+msgstr ""
+
+#: templates/admin/wmh-filter-view.php:45
+msgid "All"
+msgstr ""
+
+#: templates/admin/wmh-heading-and-notice-view.php:283
+msgid "Allow Media Hygiene to collect anonymous data about media file types and sizes. No personal data, filenames, or identifying information is ever sent."
+msgstr ""
+
+#: templates/admin/wmh-heading-and-notice-view.php:118
+msgid "Always backup before making changes."
+msgstr ""
+
+#: includes/wmh-dashboard.php:444
+msgid "Anonymous Analytics Permission is updated"
+msgstr ""
+
+#: templates/admin/wmh-settings-view.php:318
+msgid "Anonymous Usage Data"
+msgstr ""
+
+#: media-hygiene.php:143
+#: templates/admin/wmh-plugin-feedback-view.php:30
+msgid "Anything you can tell us helps. Optional."
+msgstr ""
+
+#: includes/wmh-download-unused-media.php:38
+msgid "Apologies, but your server does not have the necessary ZIP extension installed, resulting in the unavailability of the required functionality. Please ask your system administrator to install zip extension in your server to use this feature."
+msgstr ""
+
+#: includes/wmh-general.php:220
+msgid "Are you sure want to restore default file extensions."
+msgstr ""
+
+#: includes/wmh-general.php:214
+msgid "Are you sure you want to trash all unused media in one shot?"
+msgstr ""
+
+#: templates/admin/wmh-filter-view.php:60
+msgid "Audio"
+msgstr ""
+
+#: templates/admin/wmh-settings-view.php:200
+msgid "Bi-Weekly"
+msgstr ""
+
+#: templates/admin/wmh-media-hygiene-view.php:494
+msgid "Blacklist"
+msgstr ""
+
+#: templates/admin/wmh-trash-view.php:29
+msgid "Bulk Delete Permanently"
+msgstr ""
+
+#: templates/admin/wmh-trash-view.php:19
+msgid "Bulk Restore"
+msgstr ""
+
+#: templates/admin/wmh-get-help-view.php:68
+msgid "Check"
+msgstr ""
+
+#: templates/admin/wmh-error-log-view.php:43
+msgid "Clear Scan Log"
+msgstr ""
+
+#: templates/admin/wmh-deleted-media-view.php:29
+msgid "Clear list"
+msgstr ""
+
+#: templates/admin/wmh-heading-and-notice-view.php:129
+msgid "Click the <strong>Scan</strong> button to analyze your media library. Scan time depends on your server and the number of media files. Please be patient and do not close the window until it completes."
+msgstr ""
+
+#: templates/admin/wmh-get-help-view.php:17
+msgid "Contact Support"
+msgstr ""
+
+#: includes/wmh-scan.php:381
+msgid "Content scan error (theme and widget pass): %s"
+msgstr ""
+
+#: includes/wmh-general.php:217
+msgid "Copied"
+msgstr ""
+
+#: templates/admin/wmh-media-hygiene-view.php:406
+#: templates/admin/wmh-media-hygiene-view.php:414
+#: templates/admin/wmh-media-hygiene-view.php:423
+msgid "Copy URL To Clipboard"
+msgstr ""
+
+#: templates/admin/wmh-settings-view.php:198
+msgid "Daily"
+msgstr ""
+
+#: templates/admin/wmh-header-view.php:39
+msgid "Dashboard"
+msgstr ""
+
+#: templates/admin/wmh-media-hygiene-view.php:327
+msgid "Date"
+msgstr ""
+
+#: templates/admin/wmh-deleted-media-view.php:39
+#: templates/admin/wmh-error-log-view.php:70
+msgid "Date Created"
+msgstr ""
+
+#: templates/admin/wmh-deleted-media-view.php:40
+msgid "Date Updated"
+msgstr ""
+
+#: templates/admin/wmh-settings-view.php:225
+msgid "Delete Data on Uninstall"
+msgstr ""
+
+#: templates/admin/wmh-media-hygiene-view.php:421
+#: templates/admin/wmh-media-hygiene-view.php:499
+msgid "Delete Permanently"
+msgstr ""
+
+#: templates/admin/wmh-button-view.php:214
+msgid "Delete media by page only (Free). Get the ONE SHOT delete feature (Pro version)"
+msgstr ""
+
+#: includes/wmh-scan.php:2622
+msgid "Delete operation appears stuck. No items could be deleted in this batch. Please check the scan log."
+msgstr ""
+
+#: templates/admin/wmh-deleted-media-view.php:21
+msgid "Deleted Media"
+msgstr ""
+
+#: includes/wmh-general.php:215
+msgid "Did you make a backup of your website?"
+msgstr ""
+
+#: templates/admin/wmh-button-view.php:129
+msgid "Do not close the window until the scan completes. You may continue to work in a different browser or browser tab."
+msgstr ""
+
+#: templates/admin/wmh-filter-view.php:65
+msgid "Documents"
+msgstr ""
+
+#: templates/admin/wmh-button-view.php:173
+#: templates/admin/wmh-button-view.php:178
+msgid "Download Media"
+msgstr ""
+
+#: templates/admin/wmh-button-view.php:184
+msgid "Download media by page only (Free). Get the ONE SHOT download feature (Pro version)"
+msgstr ""
+
+#: templates/admin/wmh-media-hygiene-view.php:403
+#: templates/admin/wmh-media-hygiene-view.php:412
+msgid "Edit"
+msgstr ""
+
+#: templates/admin/wmh-settings-view.php:177
+msgid "Email Notifications"
+msgstr ""
+
+#: templates/admin/wmh-settings-view.php:131
+msgid "Enter file extensions (e.g. png, jpg, etc.) to be excluded from the unused media dashboard."
+msgstr ""
+
+#: templates/admin/wmh-settings-view.php:487
+msgid "Environment"
+msgstr ""
+
+#: templates/admin/wmh-settings-view.php:398
+msgid "Every scan reads your posts, pages and media library, block theme templates and reusable blocks, your site logo and site icon, Customizer settings, widgets and Additional CSS, plus layouts built with %s page builder or theme listed below. Anything ticked in the Free column needs no upgrade."
+msgid_plural "Every scan reads your posts, pages and media library, block theme templates and reusable blocks, your site logo and site icon, Customizer settings, widgets and Additional CSS, plus layouts built with the %s page builders and themes listed below. Anything ticked in the Free column needs no upgrade."
+msgstr[0] ""
+msgstr[1] ""
+
+#: templates/admin/wmh-get-help-view.php:67
+#: templates/admin/wmh-header-view.php:62
+msgid "FAQ"
+msgstr ""
+
+#: templates/admin/wmh-media-hygiene-view.php:322
+msgid "File"
+msgstr ""
+
+#: templates/admin/wmh-settings-view.php:127
+msgid "File Exclusion"
+msgstr ""
+
+#: templates/admin/wmh-media-hygiene-view.php:325
+msgid "File Path"
+msgstr ""
+
+#: templates/admin/wmh-media-hygiene-view.php:324
+msgid "File Size"
+msgstr ""
+
+#: templates/admin/wmh-media-hygiene-view.php:326
+msgid "File Type"
+msgstr ""
+
+#: includes/wmh-scan.php:2415
+msgid "File deleted successfully."
+msgstr ""
+
+#: includes/wmh-scan.php:1340
+msgid "File trashed successfully."
+msgstr ""
+
+#: templates/admin/wmh-heading-and-notice-view.php:213
+msgid "Files used only there can appear in the unused list below, so check them before deleting."
+msgstr ""
+
+#: templates/admin/wmh-filter-view.php:75
+msgid "Filter"
+msgstr ""
+
+#: templates/admin/wmh-header-view.php:53
+msgid "Folder Scan"
+msgstr ""
+
+#: templates/admin/wmh-get-help-view.php:35
+msgid "Found A bug?"
+msgstr ""
+
+#: templates/admin/wmh-settings-view.php:414
+msgid "Free"
+msgstr ""
+
+#: templates/admin/wmh-settings-view.php:195
+msgid "Frequency"
+msgstr ""
+
+#: templates/admin/wmh-settings-view.php:530
+msgid "Full Report"
+msgstr ""
+
+#: includes/wmh-general.php:83
+#: includes/wmh-general.php:84
+#: templates/admin/wmh-header-view.php:49
+msgid "Get Help"
+msgstr ""
+
+#: templates/admin/wmh-settings-view.php:471
+msgid "Get support for WooCommerce, ACF, Slider Revolution, custom post types, and 15+ more tools."
+msgstr ""
+
+#: includes/wmh-general.php:277
+msgid "Go Pro"
+msgstr ""
+
+#: includes/wmh-download-unused-media.php:103
+#: includes/wmh-download-unused-media.php:114
+msgid "Go back"
+msgstr ""
+
+#: templates/admin/wmh-get-help-view.php:25
+msgid "Got An Idea?"
+msgstr ""
+
+#: templates/admin/wmh-heading-and-notice-view.php:282
+msgid "Help improve Media Hygiene?"
+msgstr ""
+
+#: templates/admin/wmh-settings-view.php:159
+msgid "How many unused media files are shown per page. Higher numbers allow bulk-selecting more files at once but may slow down the page on large libraries."
+msgstr ""
+
+#: includes/wmh-general.php:216
+msgid "I agree that I want to trash all unused media files and that I have made a backup of the website."
+msgstr ""
+
+#: templates/admin/wmh-plugin-feedback-view.php:14
+msgid "I could not understand how to use it"
+msgstr ""
+
+#: templates/admin/wmh-plugin-feedback-view.php:11
+msgid "I found a better plugin"
+msgstr ""
+
+#: templates/admin/wmh-review-request-view.php:41
+msgid "If the plugin saved you time, a quick review helps other people find it and helps us keep the free version going."
+msgstr ""
+
+#: templates/admin/wmh-plugin-feedback-view.php:4
+msgid "If you have a moment, please let us know why you are deactivating:"
+msgstr ""
+
+#: templates/admin/wmh-filter-view.php:50
+msgid "Images"
+msgstr ""
+
+#: templates/admin/wmh-dashboard-view.php:77
+msgid "In Use"
+msgstr ""
+
+#: templates/admin/wmh-dashboard-view.php:97
+msgid "In Use Space"
+msgstr ""
+
+#: includes/wmh-scan.php:1321
+#: includes/wmh-scan.php:2386
+msgid "Invalid media ID."
+msgstr ""
+
+#: templates/admin/wmh-plugin-feedback-view.php:16
+msgid "It is a temporary deactivation - I am troubleshooting in the issue"
+msgstr ""
+
+#: templates/admin/wmh-plugin-feedback-view.php:12
+msgid "It is not what I was looking for"
+msgstr ""
+
+#: includes/wmh-scan.php:1327
+#: includes/wmh-scan.php:2392
+msgid "Item is not a valid media attachment."
+msgstr ""
+
+#: templates/admin/wmh-settings-view.php:155
+msgid "Items Per Page"
+msgstr ""
+
+#: templates/admin/wmh-button-view.php:226
+msgid "Last scan:"
+msgstr ""
+
+#: includes/wmh-my-cron-job.php:334
+msgid "Last scan: %s"
+msgstr ""
+
+#: templates/admin/wmh-review-request-view.php:44
+msgid "Leave a review"
+msgstr ""
+
+#: templates/admin/wmh-settings-view.php:270
+msgid "Leave blank for default position."
+msgstr ""
+
+#: templates/admin/wmh-settings-view.php:207
+msgid "Leave blank to use the admin email"
+msgstr ""
+
+#: templates/admin/wmh-dashboard-view.php:83
+msgid "Left Over"
+msgstr ""
+
+#: templates/admin/wmh-dashboard-view.php:172
+msgid "Left Over Breakdown"
+msgstr ""
+
+#: templates/admin/wmh-dashboard-view.php:103
+msgid "Left Over Space"
+msgstr ""
+
+#: templates/admin/wmh-review-request-view.php:46
+msgid "Maybe later"
+msgstr ""
+
+#: templates/admin/wmh-settings-view.php:118
+msgid "Media Display"
+msgstr ""
+
+#: includes/wmh-general.php:49
+#: includes/wmh-general.php:50
+#: includes/wmh-my-cron-job.php:364
+msgid "Media Hygiene"
+msgstr ""
+
+#: includes/wmh-my-cron-job.php:431
+msgid "Media Hygiene BiWeekly"
+msgstr ""
+
+#: includes/wmh-my-cron-job.php:437
+msgid "Media Hygiene Monthly"
+msgstr ""
+
+#: templates/admin/wmh-heading-and-notice-view.php:214
+msgid "Media Hygiene Pro reads these."
+msgstr ""
+
+#: includes/wmh-my-cron-job.php:442
+msgid "Media Hygiene Quarterly"
+msgstr ""
+
+#: templates/admin/wmh-settings-view.php:520
+msgid "Media Hygiene Version"
+msgstr ""
+
+#: templates/admin/wmh-heading-and-notice-view.php:87
+msgid "Media Hygiene database update required."
+msgstr ""
+
+#: templates/admin/wmh-review-request-view.php:37
+msgid "Media Hygiene found %s of unused media on your site."
+msgstr ""
+
+#: templates/admin/wmh-heading-and-notice-view.php:91
+msgid "Media Hygiene has been updated! To keep things running smoothly, we have to update your database to the newest version. The database process will run instantly and may not take time. The database process will only check for plugin tables and will not effect any other tables. If you don't see scan button, please upgrade the Media Hygiene Database to enable. So please be patience."
+msgstr ""
+
+#: includes/wmh-plugin-feedback.php:91
+msgid "Media Hygiene is deactivated."
+msgstr ""
+
+#: templates/admin/wmh-heading-and-notice-view.php:119
+msgid "Media Hygiene scans your library for unused files, but the dynamic nature of WordPress (themes, plugins, custom fields) means some files may be incorrectly flagged. Review items carefully before deleting."
+msgstr ""
+
+#: templates/admin/wmh-dashboard-view.php:115
+msgid "Media Left Over"
+msgstr ""
+
+#: includes/wmh-scan.php:2150
+#: includes/wmh-scan.php:2240
+msgid "Media Restored."
+msgstr ""
+
+#: includes/wmh-scan.php:1998
+msgid "Media added in blacklist."
+msgstr ""
+
+#: includes/wmh-scan.php:1560
+#: includes/wmh-scan.php:1943
+msgid "Media added in whitelist."
+msgstr ""
+
+#: includes/wmh-scan.php:2590
+#: includes/wmh-scan.php:2643
+msgid "Media deleted successfully. Please note that it may take some time to update the dashboard statistics after you click OK."
+msgstr ""
+
+#: includes/wmh-deleted-media.php:68
+msgid "Media list clear"
+msgstr ""
+
+#: includes/wmh-scan.php:1569
+msgid "Media not added in whitelist."
+msgstr ""
+
+#: includes/wmh-scan.php:1637
+msgid "Media not removed form whitelist."
+msgstr ""
+
+#: includes/wmh-scan.php:1628
+msgid "Media removed form whitelist."
+msgstr ""
+
+#: includes/wmh-scan.php:2352
+msgid "Media restored successfully. Please note that it may take some time to update the dashboard statistics after you click OK."
+msgstr ""
+
+#: templates/admin/wmh-settings-view.php:242
+msgid "Menu Position"
+msgstr ""
+
+#: templates/admin/wmh-settings-view.php:246
+msgid "Menu Structure"
+msgstr ""
+
+#: templates/admin/wmh-settings-view.php:201
+msgid "Monthly"
+msgstr ""
+
+#: includes/wmh-general.php:218
+msgid "Move ALL unused media on this page to Trash? Nothing will be permanently deleted yet. Files go to the WordPress Media Trash first, so you can review and restore anything before permanent removal."
+msgstr ""
+
+#: templates/admin/wmh-settings-view.php:516
+msgid "Multisite"
+msgstr ""
+
+#: templates/admin/wmh-media-hygiene-view.php:323
+msgid "Name"
+msgstr ""
+
+#: templates/admin/wmh-get-help-view.php:15
+msgid "Need Expert Support?"
+msgstr ""
+
+#: templates/admin/wmh-settings-view.php:182
+msgid "New Upload Reminder"
+msgstr ""
+
+#: includes/wmh-my-cron-job.php:397
+msgid "New files are not unused files. A scan checks where each one is actually referenced."
+msgstr ""
+
+#: templates/admin/wmh-new-media-info-view.php:31
+msgid "New files since your last scan."
+msgstr ""
+
+#: templates/admin/wmh-deleted-media-view.php:36
+#: templates/admin/wmh-error-log-view.php:67
+#: templates/admin/wmh-settings-view.php:517
+msgid "No"
+msgstr ""
+
+#: templates/admin/wmh-media-hygiene-view.php:478
+msgid "No Value"
+msgstr ""
+
+#: templates/admin/wmh-dashboard-view.php:214
+msgid "No data available. Run a scan to see the breakdown."
+msgstr ""
+
+#: includes/wmh-scan.php:1484
+msgid "No media files could be trashed on this page."
+msgstr ""
+
+#: templates/admin/wmh-heading-and-notice-view.php:128
+msgid "No scan has been run yet."
+msgstr ""
+
+#: templates/admin/wmh-heading-and-notice-view.php:288
+msgid "No thanks"
+msgstr ""
+
+#: includes/wmh-scan.php:1733
+#: includes/wmh-scan.php:2455
+msgid "No valid media IDs received."
+msgstr ""
+
+#: includes/wmh-download-unused-media.php:115
+msgid "Not enough space available to download page media, please go back."
+msgstr ""
+
+#: templates/admin/wmh-error-log-view.php:61
+msgid "Nothing recorded yet. Run a scan and this page will show what each reader found."
+msgstr ""
+
+#: templates/admin/wmh-plugin-feedback-view.php:35
+msgid "Nothing that identifies you or your site is sent unless you tick the box below."
+msgstr ""
+
+#: templates/admin/wmh-settings-view.php:197
+msgid "Off (no emails)"
+msgstr ""
+
+#: templates/admin/wmh-settings-view.php:536
+msgid "Open the WordPress Site Health page, then click \"Copy site info to clipboard\" to get a full system report."
+msgstr ""
+
+#: templates/admin/wmh-plugin-feedback-view.php:17
+msgid "Other"
+msgstr ""
+
+#: templates/admin/wmh-filter-view.php:70
+msgid "Others"
+msgstr ""
+
+#: templates/admin/wmh-get-help-view.php:16
+msgid "Our EXPERTS would like to assist you for your query and any customization."
+msgstr ""
+
+#: templates/admin/wmh-settings-view.php:504
+msgid "PHP Max Execution Time"
+msgstr ""
+
+#: templates/admin/wmh-settings-view.php:500
+msgid "PHP Memory Limit"
+msgstr ""
+
+#: templates/admin/wmh-settings-view.php:496
+msgid "PHP Version"
+msgstr ""
+
+#: includes/wmh-scan.php:2273
+#: includes/wmh-scan.php:2356
+#: includes/wmh-scan.php:2567
+#: includes/wmh-scan.php:2652
+msgid "Pending ..."
+msgstr ""
+
+#: templates/admin/wmh-media-hygiene-view.php:778
+msgid "Perform a database update within the WordPress environment to render and visualize tabular data, thereby ensuring the seamless integration of the most recent information into the database schema."
+msgstr ""
+
+#: includes/wmh-settings.php:142
+msgid "Permission already saved."
+msgstr ""
+
+#: includes/wmh-settings.php:135
+msgid "Permission saved."
+msgstr ""
+
+#: includes/wmh-general.php:219
+msgid "Please confirm: I have a backup of my website and I understand that these files will be moved to Trash (NOT permanently deleted). I can restore any file from the Media Library if needed."
+msgstr ""
+
+#: templates/admin/wmh-settings-view.php:289
+msgid "Please refer FAQ."
+msgstr ""
+
+#: templates/admin/wmh-get-help-view.php:36
+msgid "Please report abnormal bug behaviour (e.g. error code) and we promise we will fix that as soon as humanly possible"
+msgstr ""
+
+#: includes/wmh-scan.php:2157
+msgid "Please select media by checkbox to restore."
+msgstr ""
+
+#: media-hygiene.php:149
+msgid "Please tell us why you are deactivating..."
+msgstr ""
+
+#: templates/admin/wmh-get-help-view.php:59
+msgid "Please write a review in wp.org plugin repository. Your feedback inspires us to do more!"
+msgstr ""
+
+#: templates/admin/wmh-settings-view.php:413
+msgid "Plugin / Theme / Page Builder"
+msgstr ""
+
+#: templates/admin/wmh-settings-view.php:216
+msgid "Plugin Behaviour"
+msgstr ""
+
+#: templates/admin/wmh-plugin-feedback-view.php:34
+msgid "Plugin version &nbsp;&bull;&nbsp; WordPress version &nbsp;&bull;&nbsp; PHP version &nbsp;&bull;&nbsp; Your selected reason &nbsp;&bull;&nbsp; Anything you type in the box above &nbsp;&bull;&nbsp; Whether you completed a scan"
+msgstr ""
+
+#: templates/admin/wmh-deleted-media-view.php:37
+msgid "Post Id"
+msgstr ""
+
+#: templates/admin/wmh-settings-view.php:313
+msgid "Privacy"
+msgstr ""
+
+#: templates/admin/wmh-plugin-feedback-view.php:36
+msgid "Privacy Policy"
+msgstr ""
+
+#: templates/admin/wmh-header-view.php:54
+#: templates/admin/wmh-settings-view.php:415
+msgid "Pro"
+msgstr ""
+
+#: templates/admin/wmh-plugin-feedback-view.php:54
+msgid "Processing..."
+msgstr ""
+
+#: templates/admin/wmh-settings-view.php:202
+msgid "Quarterly"
+msgstr ""
+
+#: templates/admin/wmh-settings-view.php:289
+msgid "Read FAQ"
+msgstr ""
+
+#: templates/admin/wmh-error-log-view.php:68
+msgid "Reader"
+msgstr ""
+
+#: templates/admin/wmh-settings-view.php:186
+msgid "Receive an email summary of newly uploaded attachments at your chosen frequency."
+msgstr ""
+
+#: templates/admin/wmh-settings-view.php:167
+msgid "Recommended: 10 to 50 items."
+msgstr ""
+
+#: templates/admin/wmh-settings-view.php:282
+msgid "Record what each page builder reader found during a scan. Useful when media is missing from the results."
+msgstr ""
+
+#: templates/admin/wmh-media-hygiene-view.php:415
+msgid "Remove From Whitelist"
+msgstr ""
+
+#: templates/admin/wmh-settings-view.php:232
+msgid "Remove all plugin data from the database when the plugin is uninstalled."
+msgstr ""
+
+#: templates/admin/wmh-media-hygiene-view.php:420
+#: templates/admin/wmh-media-hygiene-view.php:498
+msgid "Restore"
+msgstr ""
+
+#: templates/admin/wmh-settings-view.php:141
+msgid "Restore Default Extensions"
+msgstr ""
+
+#: templates/admin/wmh-error-log-view.php:69
+msgid "Result"
+msgstr ""
+
+#: templates/admin/wmh-settings-view.php:305
+msgid "Save Settings"
+msgstr ""
+
+#: templates/admin/wmh-button-view.php:142
+#: templates/admin/wmh-button-view.php:147
+#: templates/admin/wmh-settings-view.php:93
+msgid "Scan"
+msgstr ""
+
+#: includes/wmh-general.php:118
+#: includes/wmh-general.php:119
+#: templates/admin/wmh-error-log-view.php:27
+#: templates/admin/wmh-settings-view.php:280
+msgid "Scan Log"
+msgstr ""
+
+#: includes/wmh-scan.php:372
+#: includes/wmh-scan.php:1188
+msgid "Scan completed."
+msgstr ""
+
+#: includes/wmh-my-cron-job.php:320
+msgid "Scan for unused files"
+msgstr ""
+
+#: includes/wmh-error-log.php:36
+msgid "Scan log cleared"
+msgstr ""
+
+#: templates/admin/wmh-error-log-view.php:55
+msgid "Scan logging is switched off, so nothing new is being recorded."
+msgstr ""
+
+#: includes/wmh-dashboard.php:227
+msgid "Scan statistics could not be retrieved. The scan may not have completed successfully. Please run the scan again."
+msgstr ""
+
+#: includes/wmh-dashboard.php:78
+#: includes/wmh-dashboard.php:431
+#: includes/wmh-dashboard.php:462
+#: includes/wmh-scan.php:1003
+#: includes/wmh-scan.php:1529
+#: includes/wmh-scan.php:1594
+#: includes/wmh-scan.php:1662
+#: includes/wmh-scan.php:1910
+#: includes/wmh-scan.php:1963
+#: includes/wmh-scan.php:2666
+#: includes/wmh-settings.php:118
+msgid "Security check failed. Hacking attempt detected."
+msgstr ""
+
+#: includes/wmh-dashboard.php:485
+#: includes/wmh-deleted-media.php:41
+#: includes/wmh-deleted-media.php:60
+#: includes/wmh-download-unused-media.php:29
+#: includes/wmh-error-log.php:30
+#: includes/wmh-plugin-feedback.php:24
+#: includes/wmh-scan.php:119
+#: includes/wmh-scan.php:409
+#: includes/wmh-scan.php:1310
+#: includes/wmh-scan.php:1375
+#: includes/wmh-scan.php:1709
+#: includes/wmh-scan.php:2073
+#: includes/wmh-scan.php:2176
+#: includes/wmh-scan.php:2263
+#: includes/wmh-scan.php:2379
+#: includes/wmh-scan.php:2432
+#: includes/wmh-scan.php:2537
+#: includes/wmh-settings.php:31
+msgid "Security check. Hacking not allowed"
+msgstr ""
+
+#: templates/admin/wmh-heading-and-notice-view.php:226
+msgid "See what Pro reads"
+msgstr ""
+
+#: templates/admin/wmh-filter-view.php:40
+msgid "Select Category"
+msgstr ""
+
+#: templates/admin/wmh-settings-view.php:206
+msgid "Send to (comma-separated emails)"
+msgstr ""
+
+#: includes/wmh-my-cron-job.php:405
+msgid "Sent by Media Hygiene on %1$s. %2$sChange how often you get this%3$s."
+msgstr ""
+
+#: includes/wmh-settings.php:99
+msgid "Setting already saved."
+msgstr ""
+
+#: includes/wmh-general.php:74
+#: includes/wmh-general.php:75
+#: templates/admin/wmh-header-view.php:44
+msgid "Settings"
+msgstr ""
+
+#: includes/wmh-settings.php:92
+msgid "Settings saved."
+msgstr ""
+
+#: templates/admin/wmh-settings-view.php:327
+msgid "Share anonymous data (number of files, file types, file sizes) to help improve Media Hygiene. No filenames or identifying information is ever sent."
+msgstr ""
+
+#: templates/admin/wmh-plugin-feedback-view.php:49
+msgid "Share my name, email and site URL so you can reply about this"
+msgstr ""
+
+#: templates/admin/wmh-heading-and-notice-view.php:203
+msgid "Some media on this site is stored where the free version cannot read it."
+msgstr ""
+
+#: templates/admin/wmh-heading-and-notice-view.php:224
+msgid "Some plugins store media where the free version cannot look."
+msgstr ""
+
+#: includes/wmh-dashboard.php:436
+#: includes/wmh-scan.php:127
+#: includes/wmh-scan.php:1008
+msgid "Something is wrong"
+msgstr ""
+
+#: includes/wmh-deleted-media.php:71
+msgid "Something is wrong to clear media list"
+msgstr ""
+
+#: includes/wmh-scan.php:2077
+#: includes/wmh-scan.php:2153
+#: includes/wmh-scan.php:2180
+#: includes/wmh-scan.php:2243
+msgid "Something is wrong to restore media"
+msgstr ""
+
+#: includes/wmh-scan.php:2438
+msgid "Something went wrong deleting media."
+msgstr ""
+
+#: includes/wmh-scan.php:1715
+msgid "Something went wrong trashing media."
+msgstr ""
+
+#: templates/admin/wmh-get-help-view.php:37
+msgid "Submit Bug"
+msgstr ""
+
+#: templates/admin/wmh-get-help-view.php:27
+msgid "Submit Idea"
+msgstr ""
+
+#: templates/admin/wmh-get-help-view.php:60
+msgid "Submit Review"
+msgstr ""
+
+#: templates/admin/wmh-get-help-view.php:26
+msgid "Submit your idea to our feedback portal to have it considered."
+msgstr ""
+
+#: templates/admin/wmh-settings-view.php:98
+msgid "Supported Tools"
+msgstr ""
+
+#: templates/admin/wmh-settings-view.php:103
+msgid "System"
+msgstr ""
+
+#: templates/admin/wmh-settings-view.php:538
+msgid "System Report"
+msgstr ""
+
+#: includes/wmh-download-unused-media.php:104
+msgid "The disk space check function is not available on this server. This may be due to hosting restrictions or disabled system functions. Please contact your hosting provider for assistance."
+msgstr ""
+
+#: templates/admin/wmh-heading-and-notice-view.php:139
+msgid "The plugin database has been updated. Running a fresh scan ensures everything is detected correctly. You can continue using the plugin in the meantime."
+msgstr ""
+
+#: templates/admin/wmh-plugin-feedback-view.php:15
+msgid "The plugin is great, but I need a specific feature that you do not support"
+msgstr ""
+
+#: templates/admin/wmh-plugin-feedback-view.php:13
+msgid "The plugin is not working"
+msgstr ""
+
+#: templates/admin/wmh-plugin-feedback-view.php:10
+msgid "The plugin is not working as expected"
+msgstr ""
+
+#: includes/wmh-error-log.php:39
+msgid "The scan log could not be cleared. Please try again."
+msgstr ""
+
+#: includes/wmh-scan.php:2278
+#: includes/wmh-scan.php:2557
+msgid "There are currently no media items in the trash."
+msgstr ""
+
+#: includes/wmh-scan.php:185
+msgid "There is no media to scan"
+msgstr ""
+
+#: includes/wmh-scan.php:1438
+msgid "There is no unused media to trash."
+msgstr ""
+
+#: includes/wmh-scan.php:2418
+msgid "There was an error deleting this media file."
+msgstr ""
+
+#: includes/wmh-scan.php:1343
+msgid "There was an error trashing this media file."
+msgstr ""
+
+#: templates/admin/wmh-heading-and-notice-view.php:196
+msgid "These are stored by %s, which keeps images as internal IDs rather than links the free version can follow."
+msgstr ""
+
+#: templates/admin/wmh-heading-and-notice-view.php:184
+msgid "This scan could not read %s media reference."
+msgid_plural "This scan could not read %s media references."
+msgstr[0] ""
+msgstr[1] ""
+
+#: templates/admin/wmh-heading-and-notice-view.php:208
+msgid "This site has media fields set up in %s, and the free version cannot follow what is saved in them."
+msgstr ""
+
+#: templates/admin/wmh-heading-and-notice-view.php:270
+msgid "This usually means a plugin or theme error while the scan was running. Media used only on those items may be listed as unused, so review carefully before deleting, then run the scan again."
+msgstr ""
+
+#: templates/admin/wmh-get-help-view.php:47
+msgid "Tool Overview"
+msgstr ""
+
+#: templates/admin/wmh-dashboard-view.php:71
+msgid "Total Media"
+msgstr ""
+
+#: templates/admin/wmh-dashboard-view.php:91
+msgid "Total Space"
+msgstr ""
+
+#: includes/wmh-scan.php:2518
+msgid "Total images deleted: %d, Free up space: %s"
+msgstr ""
+
+#: includes/wmh-scan.php:1769
+msgid "Total images trashed: %d, Free up space: %s"
+msgstr ""
+
+#: templates/admin/wmh-media-hygiene-view.php:306
+#: templates/admin/wmh-media-hygiene-view.php:404
+#: templates/admin/wmh-media-hygiene-view.php:490
+msgid "Trash"
+msgstr ""
+
+#: templates/admin/wmh-button-view.php:203
+#: templates/admin/wmh-button-view.php:208
+msgid "Trash Current Page Media"
+msgstr ""
+
+#: templates/admin/wmh-error-log-view.php:56
+msgid "Turn it on in Settings"
+msgstr ""
+
+#: templates/admin/wmh-button-view.php:153
+msgid "Two types of scans: Regular (Free) and Deep (Pro version)"
+msgstr ""
+
+#: includes/wmh-download-unused-media.php:33
+msgid "Unauthorized"
+msgstr ""
+
+#: templates/admin/wmh-settings-view.php:470
+msgid "Unlock full compatibility with Pro"
+msgstr ""
+
+#: templates/admin/wmh-media-hygiene-view.php:304
+msgid "Unused"
+msgstr ""
+
+#: includes/wmh-download-unused-media.php:91
+msgid "Unused media data not set for creating zip for download page media"
+msgstr ""
+
+#: templates/admin/wmh-heading-and-notice-view.php:99
+msgid "Update Media Hygiene Database"
+msgstr ""
+
+#: templates/admin/wmh-button-view.php:155
+#: templates/admin/wmh-button-view.php:186
+#: templates/admin/wmh-button-view.php:216
+#: templates/admin/wmh-header-view.php:66
+#: templates/admin/wmh-settings-view.php:473
+msgid "Upgrade to Pro"
+msgstr ""
+
+#: templates/admin/wmh-deleted-media-view.php:38
+msgid "Url"
+msgstr ""
+
+#: templates/admin/wmh-filter-view.php:55
+msgid "Video"
+msgstr ""
+
+#: templates/admin/wmh-media-hygiene-view.php:405
+#: templates/admin/wmh-media-hygiene-view.php:413
+#: templates/admin/wmh-media-hygiene-view.php:422
+msgid "View"
+msgstr ""
+
+#: templates/admin/wmh-settings-view.php:284
+msgid "View Scan Log"
+msgstr ""
+
+#: templates/admin/wmh-button-view.php:129
+msgid "WARNING: "
+msgstr ""
+
+#: templates/admin/wmh-heading-and-notice-view.php:225
+msgid "We found no unreadable references on this site, so your results are most likely complete. If you use images inside the plugins below, check those files before deleting."
+msgstr ""
+
+#: templates/admin/wmh-settings-view.php:199
+msgid "Weekly"
+msgstr ""
+
+#: media-hygiene.php:144
+msgid "What did you expect it to do? For example: which images it missed, or what it listed as unused that is actually in use."
+msgstr ""
+
+#: templates/admin/wmh-error-log-view.php:35
+msgid "What each page builder reader found during the last scan. Most entries simply record that a builder is not in use on this site, which is normal. It is useful when media is missing from the results and you want to see what the scan could read."
+msgstr ""
+
+#: media-hygiene.php:146
+msgid "What happened? Any error message or the screen it got stuck on helps."
+msgstr ""
+
+#: templates/admin/wmh-settings-view.php:394
+msgid "What the free version reads"
+msgstr ""
+
+#: templates/admin/wmh-plugin-feedback-view.php:33
+msgid "What will be sent to mediahygiene.com:"
+msgstr ""
+
+#: media-hygiene.php:148
+msgid "Which feature do you need?"
+msgstr ""
+
+#: media-hygiene.php:145
+msgid "Which one did you switch to, and what does it do better?"
+msgstr ""
+
+#: media-hygiene.php:147
+msgid "Which part was unclear?"
+msgstr ""
+
+#: templates/admin/wmh-media-hygiene-view.php:305
+#: templates/admin/wmh-media-hygiene-view.php:489
+msgid "Whitelist"
+msgstr ""
+
+#: templates/admin/wmh-settings-view.php:508
+msgid "WordPress Memory Limit"
+msgstr ""
+
+#: templates/admin/wmh-settings-view.php:534
+msgid "WordPress Site Health"
+msgstr ""
+
+#: templates/admin/wmh-settings-view.php:492
+msgid "WordPress Version"
+msgstr ""
+
+#: templates/admin/wmh-get-help-view.php:58
+msgid "Write Review"
+msgstr ""
+
+#: templates/admin/wmh-filter-view.php:74
+msgid "YYYY-MM"
+msgstr ""
+
+#: templates/admin/wmh-settings-view.php:517
+msgid "Yes"
+msgstr ""
+
+#: templates/admin/wmh-heading-and-notice-view.php:286
+msgid "Yes, allow"
+msgstr ""
+
+#: templates/admin/wmh-heading-and-notice-view.php:243
+msgid "Your last scan was not complete."
+msgstr ""
+
+#: includes/wmh-my-cron-job.php:386
+msgid "and %s more file"
+msgid_plural "and %s more files"
+msgstr[0] ""
+msgstr[1] ""
+

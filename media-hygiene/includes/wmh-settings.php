@@ -60,8 +60,10 @@ class wmh_settings
             $ex_file_ex = sanitize_text_field($_POST['ex-file-ex']);
         }
 
-        /* timeframes */
-        $wmh_timeframes = '';
+        /* timeframes. Falls back to monthly rather than an empty string so the
+         * stored value always matches one of the cron branches. 'none' is the
+         * explicit off switch. */
+        $wmh_timeframes = 'monthly';
         if (isset($_POST['wmh-timeframes']) && $_POST['wmh-timeframes'] != '') {
             $wmh_timeframes = sanitize_text_field($_POST['wmh-timeframes']);
         }

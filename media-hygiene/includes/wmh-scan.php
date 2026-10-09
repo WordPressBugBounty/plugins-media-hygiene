@@ -91,6 +91,22 @@ class wmh_scan
 		}
 	}
 
+	/**
+	 * Increment a scan skip counter.
+	 *
+	 * fn_wmh_log only writes when WP_DEBUG is on, which is off on almost every
+	 * production site, so skipped items were invisible to users. These counters
+	 * are always recorded so the dashboard can say plainly that a result set is
+	 * incomplete, rather than presenting a partial scan as a complete one.
+	 *
+	 * @param string $option_name Option holding the counter.
+	 */
+	private function fn_wmh_bump_skip_counter( $option_name )
+	{
+		$current = (int) get_option( $option_name, 0 );
+		update_option( $option_name, $current + 1, 'no' );
+	}
+
 	public function fn_wmh_scan_unused_images()
 	{
 		if (!current_user_can('manage_options')) {
@@ -129,7 +145,7 @@ class wmh_scan
                 `date_updated` datetime NOT NULL,
                 PRIMARY KEY (`id`));";
 				dbDelta($wmh_save_scan_content_sql);
-				update_option('wmh_create_new_table_save_scan_content', 'yes');
+				update_option('wmh_create_new_table_save_scan_content', 'yes', false);
 				/* save content option delete */
 				delete_option('wmh_post_content_data');
 				delete_option('wmh_page_content_data');
@@ -164,7 +180,7 @@ class wmh_scan
 				update_option('wmh_media_type_info', '', 'no');
 				update_option('wmh_media_breakdown', '', 'no');
 				/* set status for last scan, it is intruppted or not */
-				update_option('wmh_scan_complete', 'completed');
+				update_option('wmh_scan_complete', 'completed', false);
 				$flg = 0;
 				$message = __('There is no media to scan', MEDIA_HYGIENE);
 				$output = array(
@@ -182,6 +198,9 @@ class wmh_scan
 			update_option('wmh_start_time', $start_time, 'no');
 			update_option('wmh_scan_status', '1', 'no');
 			update_option('wmh_scan_complete', 'interrupted', 'no');
+			/* reset skip counters so they describe THIS scan, not every scan ever run */
+			update_option('wmh_scan_skipped_posts', 0, 'no');
+			update_option('wmh_scan_skipped_attachments', 0, 'no');
 			delete_option('wmh_page_url_content');
 			/* clear Step 1 rendered-content basenames from any previous scan */
 			$this->conn->query(
@@ -201,17 +220,38 @@ class wmh_scan
 		}
 
 		if ($ajax_call == 2) {
-			/* build post ID list — no HTTP requests needed */
-			$wmh_scan_option_data_step1 = get_option('wmh_scan_option_data', true);
-			$excludes_post_types_step1 = isset($wmh_scan_option_data_step1['excludes_post_types']) ? (array) $wmh_scan_option_data_step1['excludes_post_types'] : [];
+			/* The free scan reads posts and pages. There used to be an
+			 * array_diff against an excludes_post_types setting here, but
+			 * nothing in the free version ever wrote that key, and the
+			 * settings save rebuilds this option from a fixed list of keys,
+			 * so any value inherited from Pro was wiped on the first save.
+			 * The filter could never remove anything, so it is gone. Adding
+			 * the setting back means adding the UI that writes it. */
+			$post_types_step1 = ['page', 'post'];
 
-			$post_types_step1 = array_values(array_diff(
-				array_merge(['page', 'post']),
-				$excludes_post_types_step1
+			/* Block theme structure, added after posts and pages.
+			 *
+			 * On a block theme the header, footer and page templates are stored
+			 * as wp_template_part and wp_template posts, and a reusable block
+			 * is a wp_block post. None of them were read, so an image placed in
+			 * a block theme footer, or held in a reusable block that is not on
+			 * a page yet, was reported as unused.
+			 *
+			 * They hold ordinary block markup, so the existing render pass reads
+			 * them unchanged: the_content turns the blocks into HTML and the same
+			 * two patterns pick up the uploads paths.
+			 *
+			 * Always scanned, and deliberately not made optional: these are
+			 * theme structure rather than content someone would choose to
+			 * skip, and leaving them out would only produce false positives
+			 * in the part of the site hardest to check by hand. */
+			$wmh_block_types_step1 = array_values(array_filter(
+				['wp_template_part', 'wp_template', 'wp_block'],
+				'post_type_exists'
 			));
 
 			$post_ids_step1 = get_posts([
-				'post_type'      => $post_types_step1,
+				'post_type'      => array_merge($post_types_step1, $wmh_block_types_step1),
 				'fields'         => 'ids',
 				'posts_per_page' => -1,
 				'post_status'    => ['publish', 'draft'],
@@ -231,7 +271,7 @@ class wmh_scan
 			wp_die();
 		}
 
-		/* in-process content rendering — 50 posts per AJAX call, no HTTP requests */
+		/* in-process content rendering, 50 posts per AJAX call, no HTTP requests */
 		$post_ids_list   = (array) get_option('wmh_url_list');
 		$total_ids_list  = (int) get_option('wmh_url_list_count');
 		$per_batch       = 50;
@@ -251,6 +291,10 @@ class wmh_scan
 				$rendered = apply_filters('the_content', $batch_post->post_content);
 			} catch (\Throwable $e) {
 				$this->fn_wmh_log('step1_render', 'Skipped post ' . $batch_post_id . ': ' . $e->getMessage());
+				/* Count it so the dashboard can tell the user their results are
+				 * incomplete. A silently skipped post means any media used only
+				 * on that post will be reported as unused. */
+				$this->fn_wmh_bump_skip_counter('wmh_scan_skipped_posts');
 				continue;
 			}
 			/* src/href upload references */
@@ -277,7 +321,7 @@ class wmh_scan
 
 		if ($ajax_call == ($total_ajax_call + 2)) {
 			try {
-			/* final batch — also scan theme mods and widgets */
+			/* final batch, also scan theme mods and widgets */
 			$theme_widget_basenames = [];
 
 			$theme_mods_data = get_theme_mods();
@@ -329,7 +373,14 @@ class wmh_scan
 			} catch (\Throwable $e) {
 				echo json_encode([
 					'flg'     => -1,
-					'message' => 'Content scan error (theme/widget pass): ' . $e->getMessage(),
+					/* placeholder, not concatenation: a translator needs to move
+					 * the detail within the sentence, and some languages put it
+					 * first */
+					'message' => sprintf(
+						/* translators: %s: the underlying error message */
+						__('Content scan error (theme and widget pass): %s', MEDIA_HYGIENE),
+						$e->getMessage()
+					),
 				]);
 				wp_die();
 			}
@@ -370,10 +421,13 @@ class wmh_scan
 		if ($ajax_call == 1) {
 			/* copy unused media table data in temp table */
 			$this->conn->query(' TRUNCATE TABLE ' . $this->wmh_temp . ' ');
-			$this->conn->query('INSERT INTO ' . $this->wmh_temp . ' SELECT * FROM ' . $this->wmh_unused_media_post_id . ' ');
+			$this->conn->query(
+				'INSERT INTO ' . $this->wmh_temp . ' (post_id, attachment_cat, ext, post_date, size, date_created, date_updated)'
+				. ' SELECT post_id, attachment_cat, ext, post_date, size, date_created, date_updated FROM ' . $this->wmh_unused_media_post_id
+			);
 			$this->conn->query(' TRUNCATE TABLE ' . $this->wmh_unused_media_post_id . ' ');
 			$this->conn->query(' TRUNCATE TABLE ' . $this->wmh_used_media_post_id . ' ');
-			/* preserve Step 1 rendered-content basenames — needed by call 12 to build the known-used index */
+			/* preserve Step 1 rendered-content basenames, needed by call 12 to build the known-used index */
 			$this->conn->query(
 				$this->conn->prepare(
 					'DELETE FROM ' . $this->wmh_save_scan_content . ' WHERE wmh_key NOT LIKE %s',
@@ -655,7 +709,194 @@ class wmh_scan
 					}
 				}
 
-				/* OceanWP custom_logo ID */
+				/* Theme mods that hold an ATTACHMENT ID rather than a URL.
+				 *
+				 * The theme-mods pass in step 1 walks get_theme_mods() for
+				 * strings containing /wp-content/uploads/, so anything stored as
+				 * an integer is skipped. custom_logo is the standard WordPress
+				 * site logo, set in Customizer > Site Identity, and it is always
+				 * an ID. It used to be read only from wmh_theme_mode_data, which
+				 * is populated only when the active theme is OceanWP, so on every
+				 * other theme the site logo could be reported as unused: a file
+				 * the user would recognise and might well delete.
+				 *
+				 * Read the mods directly, then sweep for any other integer that
+				 * really is an attachment. Commercial themes commonly store logos
+				 * and header images the same way under their own keys, and there
+				 * is no list of those to keep. A value is only trusted when the
+				 * post it points at exists and is an attachment.
+				 *
+				 * NARROWED IN 6.1.0, and the remaining behaviour is deliberate.
+				 *
+				 * The attachment check below cannot make this exact on its own, because
+				 * it only proves a number IS an attachment id, never that the setting
+				 * MEANT one. A theme storing main_menu = 4 for nav menu 4 collides with
+				 * attachment 4, and that attachment was then marked in use.
+				 *
+				 * Confirmed by test on 2026-10-03: setting a non media theme mod to 23
+				 * on a site whose attachment 23 was in the unused list moved that
+				 * attachment into the used set, through this exact code.
+				 *
+				 * So the key path is now tested first and measurements, counts, menu
+				 * locations, breakpoints, widget bookkeeping and timestamps are rejected
+				 * before the number is ever offered to the attachment check. Measured
+				 * against the theme mods of five real sites running Astra, Neve, The7,
+				 * OceanWP, Bricks, Hello Elementor, OnePress, Sinatra and a commercial
+				 * theme: 79 candidate ids before, 2 after, and the 2 are both genuine
+				 * custom_logo values. The nav_menu_locations = 4 collision that existed
+				 * on two of those sites is gone.
+				 *
+				 * What remains, and why it stays. An unrecognised key still falls
+				 * through to the attachment check, so a theme that stores its logo under
+				 * a name nobody has seen keeps working exactly as before. That is the
+				 * point: the filter only ever REJECTS on evidence, and silence is not
+				 * evidence. A collision is therefore still possible on a key whose name
+				 * gives nothing away.
+				 *
+				 * The error direction is what matters, and it is unchanged. A collision
+				 * protects a file that may be unused, so the user keeps a file they
+				 * could have deleted. The opposite mistake, skipping these integers,
+				 * would list a live site logo or header image as unused, which is how
+				 * someone deletes real content. For a deletion tool the bias belongs on
+				 * the side that costs disk space, not the side that costs a file.
+				 *
+				 * This is why it is a reject list and NOT an allowlist of media sounding
+				 * words. Real keys on those sites include ocean_logo_height,
+				 * ocean_logo_width and osh_shrink_header_logo_height, which all contain
+				 * "logo" and are all pixel measurements, so an allowlist matching "logo"
+				 * would admit the very numbers this is meant to exclude, while a theme
+				 * using an unguessable key would lose its logo. Reject on evidence,
+				 * default to keeping the file.
+				 *
+				 * custom_logo is also read directly above, before this sweep, so the
+				 * standard WordPress site logo does not depend on any of this.
+				 */
+				$theme_mod_ids_12 = [];
+
+				$custom_logo_12 = get_theme_mod('custom_logo');
+				if (!empty($custom_logo_12) && is_numeric($custom_logo_12)) {
+					$theme_mod_ids_12[] = (int) $custom_logo_12;
+				}
+
+				/* Reject numbers whose own setting name says they are a measurement,
+				 * a count or a timestamp rather than a media reference.
+				 *
+				 * The attachment check further down can only prove a number IS an
+				 * attachment id, never that the setting MEANT one, so a theme storing
+				 * main_menu = 4 for nav menu 4 collides with attachment 4. Surveying
+				 * real sites running Astra, Neve, The7, OceanWP, Bricks, OnePress and
+				 * Sinatra found 41 distinct numeric theme mod keys and exactly one of
+				 * them, custom_logo, held media. The rest were menu ids, font weights,
+				 * widths, heights, opacities and cache timestamps.
+				 *
+				 * This rejects by substring on the full key PATH, and the direction of
+				 * the test
+				 * matters. Matching a reject word drops the number; anything
+				 * unrecognised still falls through to the attachment check exactly as
+				 * before. So a theme that stores its logo under a name nobody has seen
+				 * is treated as it always was, and no site logo starts being reported
+				 * unused because of this. The failure mode stays on the safe side.
+				 *
+				 * Deliberately NOT an allowlist of media sounding words. Real keys
+				 * include ocean_logo_height, ocean_logo_width and
+				 * osh_shrink_header_logo_height, which all contain "logo" and are all
+				 * pixel measurements, so matching on "logo" would admit the very
+				 * numbers this is meant to exclude.
+				 *
+				 * A nested numeric index carries no information either way, and so
+				 * falls through; the path above it is usually enough on its own. */
+				$this_is_a_measurement = function ($k) {
+					if (!is_string($k) || $k === '') {
+						return false;
+					}
+					$k = strtolower($k);
+					$reject = array(
+						/* sizes and spacing */
+						'width', 'height', 'size', 'padding', 'margin', 'radius', 'border',
+						'spacing', 'offset', 'gap', 'indent', 'top', 'bottom', 'left',
+						'right', 'columns', 'column', 'rows',
+						/* type */
+						'weight', 'line-height', 'lineheight', 'letter', 'transform',
+						/* counts and limits */
+						'count', 'limit', 'length', 'number', 'per_page', 'perpage',
+						'posts_per', 'max', 'min', 'total',
+						/* behaviour */
+						'opacity', 'zoom', 'speed', 'delay', 'duration', 'timeout',
+						'interval', 'rotate', 'scale', 'blur', 'zindex', 'z-index',
+						'order', 'priority', 'level', 'depth',
+						/* menus, which hold term ids and collide with low attachment ids.
+						 * nav_menu_locations is where core and most themes keep them, and
+						 * the ids inside it sit under bare names like primary. */
+						'menu', 'nav_menu_locations',
+						/* responsive breakpoint buckets, which hold sizes not media.
+						 * Neve nests these inside its typography arrays. */
+						'mobile', 'tablet', 'desktop',
+						/* bookkeeping */
+						'time', 'timestamp', 'version', 'cache', 'css_post_id', 'revision',
+						/* widget bookkeeping. sidebars_widgets holds widget instance
+						 * numbers, and theme mods carry a copy of it. */
+						'sidebars_widgets', 'widget',
+					);
+					foreach ($reject as $word) {
+						if (strpos($k, $word) !== false) {
+							return true;
+						}
+					}
+					return false;
+				};
+
+				/* Walk by hand rather than with array_walk_recursive, because that
+				 * only hands back the immediate key and the context above it is what
+				 * decides the question. Astra and The7 both keep their menu ids in
+				 * nav_menu_locations under bare names like primary and split_left,
+				 * and Neve keeps font sizes under mobile, tablet and desktop inside
+				 * typography arrays. Judged on the leaf alone those look like nothing
+				 * in particular; judged on the whole path they are obviously not
+				 * media. So carry the path down and test all of it. */
+				$collect_mod_ids_12 = function ($node, $path) use (&$collect_mod_ids_12, &$theme_mod_ids_12, $this_is_a_measurement) {
+					foreach ($node as $k => $v) {
+						$here = ($path === '') ? (string) $k : $path . '.' . $k;
+						if (is_array($v)) {
+							$collect_mod_ids_12($v, $here);
+							continue;
+						}
+						if (!is_int($v) && !(is_string($v) && ctype_digit($v))) {
+							continue;
+						}
+						$candidate = (int) $v;
+						if ($candidate <= 0) {
+							continue;
+						}
+						if ($this_is_a_measurement($here)) {
+							continue;
+						}
+						$theme_mod_ids_12[] = $candidate;
+					}
+				};
+
+				$all_theme_mods_12 = get_theme_mods();
+				if (!empty($all_theme_mods_12) && is_array($all_theme_mods_12)) {
+					$collect_mod_ids_12($all_theme_mods_12, '');
+				}
+
+				/* keep only ids that are genuinely attachments */
+				$theme_mod_ids_12 = array_values(array_unique(array_filter($theme_mod_ids_12)));
+				if (!empty($theme_mod_ids_12)) {
+					$ph_12 = implode(',', array_fill(0, count($theme_mod_ids_12), '%d'));
+					$real_att_ids_12 = $this->conn->get_col(
+						$this->conn->prepare(
+							"SELECT ID FROM {$this->conn->posts}
+							 WHERE ID IN ($ph_12) AND post_type = 'attachment'",
+							$theme_mod_ids_12
+						)
+					);
+					$real_att_ids_12 = array_map('intval', (array) $real_att_ids_12);
+					if (!empty($real_att_ids_12)) {
+						$insert_post_ids($real_att_ids_12);
+					}
+				}
+
+				/* OceanWP custom_logo ID, kept for the theme's own mods array */
 				$theme_mode_12 = $this->fn_wmh_get_save_content_data('wmh_theme_mode_data');
 				if (!empty($theme_mode_12['custom_logo'])) {
 					$insert_post_ids([(int) $theme_mode_12['custom_logo']]);
@@ -697,7 +938,7 @@ class wmh_scan
 					}
 				}
 
-				/* ── Other content sources (HTML/JSON — extract via regex) ── */
+				/* Other content sources (HTML/JSON, extract via regex) */
 				$other_keys_12 = [
 					'wmh_divi_post_content_data',
 					'wmh_bricks_post_content_data',
@@ -921,13 +1162,50 @@ class wmh_scan
 		/* total attachments count */
 		$total_attachments = (int) get_option('wmh_all_attachment_ids');
 
+		/* How many attachments to read per call. Both of the divisions below
+		 * would be fatal on PHP 8 if this were zero, and isset() is not enough
+		 * to rule that out: a stored '0' or an empty string both pass isset()
+		 * and then cast to 0. Fall back to the shipped default of 30 for any
+		 * value that is not a positive number. */
+		$per_post = isset($wmh_scan_option_data['number_of_image_scan'])
+			? (int) $wmh_scan_option_data['number_of_image_scan']
+			: 30;
+		if ($per_post < 1) {
+			$per_post = 30;
+		}
+
+		/* Nothing to scan. Step 1 normally catches an empty library and stops
+		 * the chain before this endpoint is ever reached, so wmh_all_attachment_ids
+		 * is set by the time we get here in ordinary use. It is not guaranteed
+		 * though: the option is missing until the first scan has run, it is
+		 * removed on uninstall, and this endpoint can be called on its own,
+		 * for instance when a browser retries after an earlier step failed.
+		 * Dividing by a zero count was a white screen rather than a message,
+		 * because 100 / 0 throws DivisionByZeroError on PHP 8 where PHP 7.4
+		 * only warned and returned INF.
+		 *
+		 * Answer the way a finished scan answers. flg 2 is what the caller
+		 * already treats as a clean finish, so an empty library ends the run
+		 * tidily instead of looking like a crash. */
+		if ($total_attachments < 1) {
+			update_option('wmh_scan_complete', 'completed', 'no');
+			update_option('wmh_end_time', date('Y-m-d h:i:s'), 'no');
+			echo json_encode(array(
+				'flg' => 2,
+				'message' => __('Scan completed.', MEDIA_HYGIENE),
+			));
+			wp_die();
+		}
+
 		/* get post_type attachment data by offset */
-		$per_post = isset($wmh_scan_option_data['number_of_image_scan']) ? (int) $wmh_scan_option_data['number_of_image_scan'] : 30;
 		$offset = ($ajax_call - 1) * $per_post;
 		$attachments = $this->fn_wmh_get_post_type_attachment_data($offset, $per_post);
 
 		/* count total ajax call */
-		$total_ajax_call = ceil(($total_attachments / $per_post));
+		$total_ajax_call = (int) ceil($total_attachments / $per_post);
+		if ($total_ajax_call < 1) {
+			$total_ajax_call = 1;
+		}
 
 		/* get progress bar width and percentage */
 		$percentage = (100 / $total_ajax_call);
@@ -940,7 +1218,7 @@ class wmh_scan
 			$size_type = get_intermediate_image_sizes();
 			array_push($size_type, 'full');
 
-			/* Batch-load mime type and post_date — 1 query instead of N individual get_post() calls */
+			/* Batch-load mime type and post_date, 1 query instead of N individual get_post() calls */
 			$mime_map = [];
 			$date_map = [];
 			$id_list  = implode(',', array_map('intval', $attachments));
@@ -952,7 +1230,7 @@ class wmh_scan
 				$mime_map[(int)$row['ID']] = $row['post_mime_type'];
 				$date_map[(int)$row['ID']] = $row['post_date'];
 			}
-			/* Prime the post metadata cache — eliminates per-attachment meta DB queries
+			/* Prime the post metadata cache, eliminates per-attachment meta DB queries
 			 * (covers wp_get_attachment_metadata, wp_get_original_image_url, wp_get_attachment_url) */
 			update_meta_cache('post', array_map('intval', $attachments));
 
@@ -1063,6 +1341,9 @@ class wmh_scan
 				}
 				} catch (\Throwable $e) {
 					$this->fn_wmh_log('step3_classify', 'Skipped attachment ' . $id . ': ' . $e->getMessage());
+					/* Count it: a skipped attachment appears in neither the used
+					 * nor the unused list, so the totals would silently not add up. */
+					$this->fn_wmh_bump_skip_counter('wmh_scan_skipped_attachments');
 				}
 			}
 		}
@@ -1112,7 +1393,7 @@ class wmh_scan
 		);
 	}
 
-	/* check post content — returns array of upload basenames found in post_content rows */
+	/* check post content, returns array of upload basenames found in post_content rows */
 	public function fn_wmh_check_post_content()
 	{
 		$basenames = [];
@@ -1142,7 +1423,7 @@ class wmh_scan
 		return array_values($basenames);
 	}
 
-	/* check page content — returns array of upload basenames found in page post_content rows */
+	/* check page content, returns array of upload basenames found in page post_content rows */
 	public function fn_wmh_check_page_content()
 	{
 		$basenames = [];
@@ -1229,7 +1510,7 @@ class wmh_scan
 					'size' => $media_size
 				);
 				$this->fn_wmh_update_statistics_data_on_delete($update_statistics_array);
-				echo json_encode(['flg' => 1, 'message' => esc_html__('File trashed successfully.', MEDIA_HYGIENE)]);
+				echo json_encode(['flg' => 1, 'message' => esc_html__('Moved to Trash. You can restore it from the Trash tab.', MEDIA_HYGIENE)]);
 			} else {
 				$this->fn_wmh_log('row_action_trash', "wp_trash_post failed for post_id={$post_id}.");
 				echo json_encode(['flg' => 0, 'message' => esc_html__('There was an error trashing this media file.', MEDIA_HYGIENE)]);
@@ -1427,9 +1708,8 @@ class wmh_scan
 
 				$post_id = (int) sanitize_text_field($_POST['post_id']);
 				$whitelist_posts_result = array();
-				$whitelist_posts_sql = $this->conn->prepare('SELECT * FROM ' . $this->wmh_unused_media_post_id . ' WHERE post_id = %d', $post_id);
+				$whitelist_posts_sql = $this->conn->prepare('SELECT post_id, attachment_cat, ext, post_date, size, date_created, date_updated FROM ' . $this->wmh_unused_media_post_id . ' WHERE post_id = %d', $post_id);
 				$whitelist_posts_result = $this->conn->get_row($whitelist_posts_sql, ARRAY_A);
-				$whitelist_posts_result['id'] = '';
 				$whitelist_post_id_inserted = $this->conn->insert($this->wmh_whitelist_media_post_id, $whitelist_posts_result);
 				if ($whitelist_post_id_inserted) {
 					$this->conn->delete($this->wmh_unused_media_post_id, array('post_id' => $post_id));
@@ -1449,7 +1729,7 @@ class wmh_scan
 					$this->fn_wmh_update_statistics_data_on_delete($update_statistics_array);
 
 					$flg = 1;
-					$message = esc_html(__('Media added in whitelist.', MEDIA_HYGIENE));
+					$message = esc_html(__('Added to the whitelist. It will be left alone by future scans.', MEDIA_HYGIENE));
 					$output = array(
 						'flg' => $flg,
 						'message' => $message
@@ -1458,7 +1738,7 @@ class wmh_scan
 				} else {
 
 					$flg = 1;
-					$message = esc_html(__('Media not added in whitelist.', MEDIA_HYGIENE));
+					$message = esc_html(__('Could not add this file to the whitelist. Please try again.', MEDIA_HYGIENE));
 					$output = array(
 						'flg' => $flg,
 						'message' => $message
@@ -1492,9 +1772,8 @@ class wmh_scan
 
 				$post_id = (int) sanitize_text_field($_POST['post_id']);
 				$whitelist_posts_result = array();
-				$whitelist_posts_sql = $this->conn->prepare('SELECT * FROM ' . $this->wmh_whitelist_media_post_id . ' WHERE post_id = %d', $post_id);
+				$whitelist_posts_sql = $this->conn->prepare('SELECT post_id, attachment_cat, ext, post_date, size, date_created, date_updated FROM ' . $this->wmh_whitelist_media_post_id . ' WHERE post_id = %d', $post_id);
 				$whitelist_posts_result = $this->conn->get_row($whitelist_posts_sql, ARRAY_A);
-				$whitelist_posts_result['id'] = '';
 				$whitelist_post_id_inserted = $this->conn->insert($this->wmh_unused_media_post_id, $whitelist_posts_result);
 				if ($whitelist_post_id_inserted) {
 					$whitelist_post_id_array = array(
@@ -1611,7 +1890,7 @@ class wmh_scan
 			isset($_POST['bulk_action_val']) && sanitize_text_field($_POST['bulk_action_val']) === 'trash' &&
 			isset($_POST['chek_box_val']) && !empty($_POST['chek_box_val'])
 		) {
-			/* Sanitise IDs — cast to int, drop zeros */
+			/* Sanitise IDs, cast to int, drop zeros */
 			$raw_ids  = rest_sanitize_array($_POST['chek_box_val']);
 			$post_ids = array_values(array_filter(array_map('intval', $raw_ids)));
 
@@ -1658,7 +1937,7 @@ class wmh_scan
 			$this->fn_wmh_update_statistics_data_on_delete($update_statistics_array);
 			$flg     = 1;
 			$message = esc_html(sprintf(
-				__('Total images trashed: %d, Free up space: %s', MEDIA_HYGIENE),
+				__('%d file(s) moved to Trash, %s freed. You can restore them from the Trash tab.', MEDIA_HYGIENE),
 				$trashed_count,
 				size_format(array_sum($size_array))
 			));
@@ -1808,9 +2087,8 @@ class wmh_scan
 				$size = array();
 				$media_size_array = array();
 				foreach ($chek_box_val as $d_id) {
-					$sql = $this->conn->prepare('SELECT * FROM ' . $this->wmh_unused_media_post_id . ' WHERE post_id = %d', (int) $d_id);
+					$sql = $this->conn->prepare('SELECT post_id, attachment_cat, ext, post_date, size, date_created, date_updated FROM ' . $this->wmh_unused_media_post_id . ' WHERE post_id = %d', (int) $d_id);
 					$data = $this->conn->get_row($sql, ARRAY_A);
-					$data['id'] = '';
 					if (isset($data) && !empty($data)) {
 						$whitelist_post_id_inserted = $this->conn->insert($this->wmh_whitelist_media_post_id, $data);
 						if ($whitelist_post_id_inserted) {
@@ -1832,7 +2110,7 @@ class wmh_scan
 					);
 					$this->fn_wmh_update_statistics_data_on_delete($update_statistics_array);
 					$flg = 1;
-					$message = esc_html(__('Media added in whitelist.', MEDIA_HYGIENE));
+					$message = esc_html(__('Added to the whitelist. It will be left alone by future scans.', MEDIA_HYGIENE));
 					$output = array(
 						'flg' => $flg,
 						'message' => $message
@@ -1861,9 +2139,8 @@ class wmh_scan
 				$size = array();
 				$media_size_array = array();
 				foreach ($chek_box_val as $d_id) {
-					$sql = $this->conn->prepare('SELECT * FROM ' . $this->wmh_whitelist_media_post_id . ' WHERE post_id = %d', (int) $d_id);
+					$sql = $this->conn->prepare('SELECT post_id, attachment_cat, ext, post_date, size, date_created, date_updated FROM ' . $this->wmh_whitelist_media_post_id . ' WHERE post_id = %d', (int) $d_id);
 					$data = $this->conn->get_row($sql, ARRAY_A);
-					$data['id'] = '';
 					if (isset($data) && !empty($data)) {
 						$whitelist_post_id_inserted = $this->conn->insert($this->wmh_unused_media_post_id, $data);
 						if ($whitelist_post_id_inserted) {
@@ -1887,7 +2164,7 @@ class wmh_scan
 					$this->fn_wmh_update_statistics_data_on_delete($update_statistics_array);
 
 					$flg = 1;
-					$message = esc_html(__('Media added in blacklist.', MEDIA_HYGIENE));
+					$message = esc_html(__('Removed from the whitelist. These files are back in the unused list.', MEDIA_HYGIENE));
 					$output = array(
 						'flg' => $flg,
 						'message' => $message
@@ -1966,7 +2243,7 @@ class wmh_scan
 		}
 
 		$flg = 0;
-		$message = __('Something is wrong to restore media', MEDIA_HYGIENE);
+		$message = __('Could not restore this file. Please reload the page and try again.', MEDIA_HYGIENE);
 
 		$chek_box_val = [];
 		if (isset($_POST['action']) && sanitize_text_field($_POST['action']) == 'bulk_action_trash_to_restore') {
@@ -2039,14 +2316,14 @@ class wmh_scan
 				$this->fn_wmh_update_statistics_data_on_restore($update_statistics_array);
 
 				$flg = 1;
-				$message = __('Media Restored.', MEDIA_HYGIENE);
+				$message = __('Restored. The file is back in the unused list.', MEDIA_HYGIENE);
 			} else {
 				$flg = 0;
-				$message = __('Something is wrong to restore media', MEDIA_HYGIENE);
+				$message = __('Could not restore this file. Please reload the page and try again.', MEDIA_HYGIENE);
 			}
 		} else {
 			$flg = 0;
-			$message = __('Please, select media by checkbox to restore');
+			$message = __('Please select media by checkbox to restore.', MEDIA_HYGIENE);
 		}
 		$output = [
 			'flg' => $flg,
@@ -2069,7 +2346,7 @@ class wmh_scan
 		}
 
 		$flg = 0;
-		$message = __('Something is wrong to restore media', MEDIA_HYGIENE);
+		$message = __('Could not restore this file. Please reload the page and try again.', MEDIA_HYGIENE);
 
 		$post_id = isset($_POST['post_id']) ? sanitize_text_field($_POST['post_id']) : 0;
 		$file_size = isset($_POST['file_size']) ? sanitize_text_field($_POST['file_size']) : 0;
@@ -2129,10 +2406,10 @@ class wmh_scan
 					);
 					$this->fn_wmh_update_statistics_data_on_restore($update_statistics_array);
 					$flg = 1;
-					$message = __('Media Restored.', MEDIA_HYGIENE);
+					$message = __('Restored. The file is back in the unused list.', MEDIA_HYGIENE);
 				} else {
 					$flg = 0;
-					$message = __('Something is wrong to restore media', MEDIA_HYGIENE);
+					$message = __('Could not restore this file. Please reload the page and try again.', MEDIA_HYGIENE);
 				}
 			}
 		}
@@ -2160,7 +2437,7 @@ class wmh_scan
 		if ($ajax_call == 0) {
 			$trash_media_count = wp_count_attachments()->trash;
 			if ($trash_media_count) {
-				update_option('wmh_bulk_restore_total_trash_media', $trash_media_count);
+				update_option('wmh_bulk_restore_total_trash_media', $trash_media_count, false);
 				$ajax_call++;
 				echo json_encode(['flg' => 1, 'ajax_call' => $ajax_call, 'message' => __('Pending ...', MEDIA_HYGIENE), 'progress_bar' => 0]);
 				wp_die();
@@ -2176,9 +2453,25 @@ class wmh_scan
 
 		$per_post = 25;
 		$posts_count = (int) get_option('wmh_bulk_restore_total_trash_media');
-		$total_ajax_call = (int) ceil($posts_count / $per_post);
-		$progress_bar = min((($ajax_call / $total_ajax_call) * 100), 100);
-		$progress_bar = number_format($progress_bar, 2);
+
+		/* Floor of 1. The finish branches delete this option, so a late or
+		 * repeated call can arrive with it gone, and ceil(0 / 25) is 0, which
+		 * makes the division below a DivisionByZeroError, fatal on PHP 8. */
+		$total_ajax_call = ($posts_count > 0) ? (int) ceil($posts_count / $per_post) : 1;
+		if ($total_ajax_call < 1) {
+			$total_ajax_call = 1;
+		}
+
+		/* Progress from what is actually LEFT, not from the call counter.
+		 * The counter was worked out before any restoring happened, so a bar
+		 * driven by it showed 66.67% while 60 files were still in the Trash.
+		 * Counting the remaining trashed attachments cannot disagree with
+		 * what the user can see on the Trash tab. */
+		$wmh_still_trashed = (int) wp_count_attachments()->trash;
+		$wmh_done = max(0, $posts_count - $wmh_still_trashed);
+		$progress_bar = ($posts_count > 0)
+			? number_format(min(($wmh_done / $posts_count) * 100, 100), 2)
+			: '100.00';
 
 		$post_ids = get_posts([
 			'post_type'      => 'attachment',
@@ -2187,6 +2480,28 @@ class wmh_scan
 			'fields'         => 'ids'
 		]);
 
+		/* Nothing left to restore means we are done, whatever the counter
+		 * predicted at the start.
+		 *
+		 * $total_ajax_call is computed once from the trash count before any
+		 * work happens, but every wp_untrash_post() shrinks that set. Relying
+		 * on the counter alone announced "Media restored successfully" while
+		 * the bar still read 1/2 and the Trash tab still listed 61 files.
+		 * An empty batch is a fact about the data, not a prediction, which is
+		 * what the delete handler already uses. */
+		if (empty($post_ids)) {
+			delete_option('wmh_bulk_restore_total_trash_media');
+			echo json_encode([
+				'flg'             => 2,
+				'ajax_call'       => $ajax_call,
+				'message'         => __('Restored. The files are back in the unused list.', MEDIA_HYGIENE),
+				'total_ajax_call' => $total_ajax_call,
+				'progress_bar'    => 100,
+			]);
+			wp_die();
+		}
+
+		$wmh_restored_any = false;
 		if (!empty($post_ids)) {
 			foreach ($post_ids as $a_id) {
 				$media_size_array = [];
@@ -2223,6 +2538,7 @@ class wmh_scan
 					}
 				}
 				if (wp_untrash_post($a_id)) {
+					$wmh_restored_any = true;
 					$insert_array = array(
 						'id' => '',
 						'post_id' => $a_id,
@@ -2238,11 +2554,25 @@ class wmh_scan
 			}
 		}
 
-		if ($ajax_call == $total_ajax_call) {
+		/* Nothing in this batch could be restored, so the next call would ask
+		 * for the same files and loop forever. Stop and say so. */
+		if (!$wmh_restored_any) {
 			delete_option('wmh_bulk_restore_total_trash_media');
-			$flg = 2;
-			$message = __('Media restored successfully. Please note that it may take some time to update the dashboard statistics after you click OK.', MEDIA_HYGIENE);
-		} else {
+			echo json_encode([
+				'flg'             => 2,
+				'ajax_call'       => $ajax_call,
+				'message'         => __('Some files could not be restored and are still in the Trash. Please reload the page and try again.', MEDIA_HYGIENE),
+				'total_ajax_call' => $total_ajax_call,
+				'progress_bar'    => 100,
+			]);
+			wp_die();
+		}
+
+		/* This batch had files in it, so there may be more. Never finish on
+		 * the counter: it was worked out from the trash count before any
+		 * restoring happened, and every wp_untrash_post() since has made it
+		 * wrong. The empty-batch check above is what ends the run. */
+		{
 			$ajax_call++;
 			$flg = 1;
 			$message = __('Pending ...', MEDIA_HYGIENE);
@@ -2285,7 +2615,7 @@ class wmh_scan
 			wp_die();
 		}
 
-		/* Fetch URL BEFORE deletion — wp_get_attachment_url() returns false after the post is deleted */
+		/* Fetch URL BEFORE deletion, wp_get_attachment_url() returns false after the post is deleted */
 		$post_mime_type = sanitize_mime_type(get_post_mime_type($post_id));
 		$guid = str_contains($post_mime_type, 'image')
 			? wp_get_original_image_url($post_id)
@@ -2304,7 +2634,7 @@ class wmh_scan
 				]);
 			}
 			$this->conn->delete($this->wmh_unused_media_post_id, ['post_id' => $post_id]);
-			echo json_encode(['flg' => 1, 'message' => esc_html__('File deleted successfully.', MEDIA_HYGIENE)]);
+			echo json_encode(['flg' => 1, 'message' => esc_html__('Deleted permanently. This cannot be undone.', MEDIA_HYGIENE)]);
 		} else {
 			$this->fn_wmh_log('delete_permanently_single', "wp_delete_attachment failed for post_id={$post_id}.");
 			echo json_encode(['flg' => 0, 'message' => esc_html__('There was an error deleting this media file.', MEDIA_HYGIENE)]);
@@ -2333,7 +2663,7 @@ class wmh_scan
 			isset($_POST['bulk_action_val']) && sanitize_text_field($_POST['bulk_action_val']) === 'delete' &&
 			isset($_POST['chek_box_val']) && !empty($_POST['chek_box_val'])
 		) {
-			/* Sanitise IDs — cast to int, drop zeros */
+			/* Sanitise IDs, cast to int, drop zeros */
 			$raw_ids  = rest_sanitize_array($_POST['chek_box_val']);
 			$post_ids = array_values(array_filter(array_map('intval', $raw_ids)));
 
@@ -2361,7 +2691,7 @@ class wmh_scan
 
 				$post_mime_type = sanitize_mime_type(get_post_mime_type($d_id));
 
-				/* Fetch URL BEFORE deletion — wp_get_attachment_url returns false after delete */
+				/* Fetch URL BEFORE deletion, wp_get_attachment_url returns false after delete */
 				$guid = str_contains($post_mime_type, 'image')
 					? wp_get_original_image_url($d_id)
 					: wp_get_attachment_url($d_id);
@@ -2407,7 +2737,7 @@ class wmh_scan
 			$deleted_count = count($deleted_ids);
 			$flg           = 1;
 			$message       = esc_html(sprintf(
-				__('Total images deleted: %d, Free up space: %s', MEDIA_HYGIENE),
+				__('%d file(s) deleted permanently, %s freed. This cannot be undone.', MEDIA_HYGIENE),
 				$deleted_count,
 				size_format(array_sum($size_array))
 			));
@@ -2434,7 +2764,7 @@ class wmh_scan
 		$ajax_call = (int) ($_POST['ajax_call'] ?? 0);
 		$per_post  = 25;
 
-		/* Call 0: initialise — count trashed attachments with a direct SQL query */
+		/* Call 0: initialise, count trashed attachments with a direct SQL query */
 		if ($ajax_call === 0) {
 			$trash_count = (int) $this->conn->get_var(
 				$this->conn->prepare(
@@ -2479,7 +2809,7 @@ class wmh_scan
 			echo json_encode([
 				'flg'          => 2,
 				'ajax_call'    => $ajax_call,
-				'message'      => esc_html__('Media deleted successfully. Please note that it may take some time to update the dashboard statistics after you click OK.', MEDIA_HYGIENE),
+				'message'      => esc_html__('Trash emptied. The files have been deleted from your server.', MEDIA_HYGIENE),
 				'progress_bar' => 100,
 			]);
 			wp_die();
@@ -2495,7 +2825,7 @@ class wmh_scan
 			}
 		}
 
-		/* Stuck detection — if nothing was deleted from the plugin table, stop to avoid infinite loop */
+		/* Stuck detection, if nothing was deleted from the plugin table, stop to avoid infinite loop */
 		if (!empty($deleted_ids)) {
 			$id_ph = implode(',', array_fill(0, count($deleted_ids), '%d'));
 			$this->conn->query(
@@ -2511,7 +2841,7 @@ class wmh_scan
 			$this->fn_wmh_log('delete_permanently', 'Stuck: wp_delete_attachment returned false for all items in batch at ajax_call=' . $ajax_call);
 			echo json_encode([
 				'flg'     => -1,
-				'message' => esc_html__('Delete operation appears stuck — no items could be deleted in this batch. Please check the error log.', MEDIA_HYGIENE),
+				'message' => esc_html__('Delete operation appears stuck. No items could be deleted in this batch. Please check the scan log.', MEDIA_HYGIENE),
 			]);
 			wp_die();
 		}
@@ -2527,12 +2857,34 @@ class wmh_scan
 			? number_format(min((($total_initial - $remaining) / $total_initial) * 100, 100), 2)
 			: 100;
 
-		if ($remaining === 0 || $ajax_call >= $total_ajax_call) {
+		/* Finish only when the Trash is actually empty. The counter was
+		 * worked out before any deleting happened, so it is a prediction,
+		 * and a batch that only partly succeeds makes it wrong. Stuck
+		 * detection above catches a batch where EVERY delete fails, not
+		 * one where a few files keep coming back. */
+		if ($remaining === 0) {
 			delete_option('wmh_bulk_delete_permanently_total_trash_media');
 			echo json_encode([
 				'flg'          => 2,
 				'ajax_call'    => $ajax_call,
-				'message'      => esc_html__('Media deleted successfully. Please note that it may take some time to update the dashboard statistics after you click OK.', MEDIA_HYGIENE),
+				'message'      => esc_html__('Trash emptied. The files have been deleted from your server.', MEDIA_HYGIENE),
+				'progress_bar' => 100,
+			]);
+			wp_die();
+		}
+
+		/* The counter has run out but files are still here, so some of them
+		 * cannot be deleted. Saying "deleted successfully" would be false.
+		 * Stop and report it rather than looping on files that will keep
+		 * failing. */
+		if ($ajax_call >= $total_ajax_call) {
+			delete_option('wmh_bulk_delete_permanently_total_trash_media');
+			$this->fn_wmh_log('delete_permanently', 'Counter exhausted with ' . $remaining . ' item(s) still in trash at ajax_call=' . $ajax_call);
+			echo json_encode([
+				'flg'          => 2,
+				'ajax_call'    => $ajax_call,
+				/* translators: %d: number of files that could not be deleted */
+				'message'      => sprintf(esc_html__('%d file(s) could not be deleted and are still in the Trash. Please reload the page and try again.', MEDIA_HYGIENE), $remaining),
 				'progress_bar' => 100,
 			]);
 			wp_die();
@@ -2574,7 +2926,7 @@ class wmh_scan
 				)
 			);
 			if ($elementor_count > 0) {
-				update_option('wmh_total_elementor_call', $elementor_count);
+				update_option('wmh_total_elementor_call', $elementor_count, false);
 				$ajax_call++;
 				$flg = 1;
 			} else {

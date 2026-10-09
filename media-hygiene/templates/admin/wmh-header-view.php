@@ -1,5 +1,8 @@
 <?php
 
+defined('ABSPATH') or die('Plugin file cannot be accessed directly.');
+
+
 /* Get admin site_url */
 $admin_url = admin_url();
 
@@ -45,7 +48,7 @@ if ((array_key_exists($media_hygine_key, $all_plugins))) {
             <i class="fa-solid fa-life-ring"></i>
             <?php _e('Get Help', MEDIA_HYGIENE); ?>
         </a>
-        <a class="wmh-hd-link wmh-hd-folderscan" href="https://www.mediahygiene.com/pricing/" target="_blank">
+        <a class="wmh-hd-link wmh-hd-folderscan" href="<?php echo wmh_site_link('pricing', 'header-folderscan'); ?>" target="_blank">
             <i class="fa-solid fa-folder-open"></i>
             <?php _e('Folder Scan', MEDIA_HYGIENE); ?>
             <span class="wmh-pro-badge"><?php _e('Pro', MEDIA_HYGIENE); ?></span>
@@ -54,11 +57,11 @@ if ((array_key_exists($media_hygine_key, $all_plugins))) {
 
     <!-- Action Buttons -->
     <div class="wmh-hd-actions">
-        <a class="wmh-hd-faq" href="https://www.mediahygiene.com/faq/" target="_blank">
+        <a class="wmh-hd-faq" href="<?php echo wmh_site_link('faq', 'header-faq'); ?>" target="_blank">
             <i class="fa-solid fa-circle-question"></i>
             <?php _e('FAQ', MEDIA_HYGIENE); ?>
         </a>
-        <a class="wmh-hd-upgrade" href="https://www.mediahygiene.com/pricing/" target="_blank">
+        <a class="wmh-hd-upgrade" href="<?php echo wmh_site_link('pricing', 'header-upgrade'); ?>" target="_blank">
             <i class="fa-solid fa-crown"></i>
             <?php _e('Upgrade to Pro', MEDIA_HYGIENE); ?>
         </a>

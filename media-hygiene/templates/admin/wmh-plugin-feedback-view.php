@@ -55,7 +55,17 @@
         <div style="padding-top:8px; border-top:1px solid #e0e0e0;">
             <strong style="color:#1d2327;"><?php _e('Nothing that identifies you or your site is sent', MEDIA_HYGIENE); ?></strong>
             <?php _e('unless you tick the box below.', MEDIA_HYGIENE); ?>
-            <a href="<?php echo wmh_site_link('privacy-policy', 'deactivate-modal', '', false, 'transparency'); ?>" target="_blank" rel="noopener noreferrer"><?php _e('Privacy Policy', MEDIA_HYGIENE); ?></a>
+            <?php
+            /* This template is included from admin_footer, and during a plugin
+             * update the OLD main file is still the code in memory when the NEW
+             * template is read from disk. Updating from 6.0.0, which has no
+             * wmh_site_link(), fataled the update screen (graphicrealms.com,
+             * 2026-10-10). Never call a helper here without a fallback. */
+            $wmh_privacy_url = function_exists('wmh_site_link')
+                ? wmh_site_link('privacy-policy', 'deactivate-modal', '', false, 'transparency')
+                : esc_url('https://mediahygiene.com/privacy-policy/');
+            ?>
+            <a href="<?php echo $wmh_privacy_url; ?>" target="_blank" rel="noopener noreferrer"><?php _e('Privacy Policy', MEDIA_HYGIENE); ?></a>
         </div>
     </div>
 

@@ -2,7 +2,7 @@
 # This file is distributed under the GPLv2 or later.
 msgid ""
 msgstr ""
-"Project-Id-Version: Media Hygiene 6.1.0\n"
+"Project-Id-Version: Media Hygiene 6.1.1\n"
 "Report-Msgid-Bugs-To: https://mediahygiene.com/\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"

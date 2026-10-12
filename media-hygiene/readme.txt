@@ -4,7 +4,7 @@ Tags: unused media, delete unused images, media library, media cleanup, unused i
 Requires at least: 5.3
 Tested up to: 7.1.3
 Requires PHP: 8.0
-Stable tag: 6.1.0
+Stable tag: 6.1.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -302,6 +302,9 @@ The Media Hygiene plugin is designed to be compatible with the latest version of
 
 == Upgrade Notice ==
 
+= 6.1.1 =
+Fixes a server error that could appear on the update screen when updating from 6.0.
+
 = 6.1.0 =
 Version 6.1.0 improves scan accuracy, safety, reporting, and overall usability across Media Hygiene.
 
@@ -316,6 +319,10 @@ Version 6.1.0 improves scan accuracy, safety, reporting, and overall usability a
 - Additional reliability, performance, security, navigation, translation, and usability improvements throughout the plugin.
 
 == Changelog ==
+
+= 6.1.1 =
+* Fixed: updating from 6.0 could show a server error on the update screen. The update itself finished correctly, and the site was not affected.
+* Changed: the deactivation feedback form is now only added to the Plugins screen, instead of to every admin page.
 
 = 6.1.0 =
 This release is mostly about trust: files that were being listed as unused when they were still on your site, and warnings that were telling you the wrong thing.

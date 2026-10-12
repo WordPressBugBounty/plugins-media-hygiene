@@ -4,7 +4,7 @@
 Plugin Name: Media Hygiene
 Plugin URI: https://mediahygiene.com/
 Description: A plugin to remove unused media from WordPress and free up space on hosting.
-Version: 6.1.0
+Version: 6.1.1
 Requires PHP: 8.0
 Author: Media Hygiene
 Author URI: https://mediahygiene.com
@@ -23,7 +23,7 @@ class media_hygiene
     {
         /* define */
         define('MEDIA_HYGIENE', 'media-hygiene');
-        define('MH_FILE_VERSION', '6.1.0');
+        define('MH_FILE_VERSION', '6.1.1');
         define('MH_PREFIX', 'wmh_');
         define('MH_FILE_PATH', plugin_dir_path(__FILE__));
         define('MH_FILE_URL', plugin_dir_url(__FILE__));
@@ -112,6 +112,18 @@ class media_hygiene
 
     public function fn_wmh_deactivation_plugin_feedback_popup()
     {
+        /* The deactivate popup only belongs on the Plugins screen. Printing it
+         * in every admin footer also printed it on update.php, where an
+         * in-flight update runs this old code against new template files.
+         *
+         * Check $pagenow, NOT the admin_footer argument: admin-footer.php
+         * passes an empty string, only iframe_footer() passes the page name.
+         * Checking the argument hid the popup on the Plugins screen too, and
+         * Deactivate stopped working (caught testing 6.1.1, 2026-10-12). */
+        global $pagenow;
+        if ($pagenow !== 'plugins.php') {
+            return;
+        }
         $wmh_general = new wmh_general();
         $wmh_general->fn_wmh_get_template('wmh-plugin-feedback-view.php');
     }

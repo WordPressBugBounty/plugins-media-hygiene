@@ -42,6 +42,11 @@ jQuery(document).ready(function () {
 
 /* deactivate link click — open modal */
 jQuery(document).on('click', '#deactivate-media-hygiene', function (e) {
+    /* No popup on the page means let the link deactivate as normal. A missing
+       feedback form must never stop someone deactivating the plugin. */
+    if (!jQuery('#wmh-feedback-modal').length) {
+        return;
+    }
     e.preventDefault();
     jQuery('#wmh-feedback-modal').dialog('open');
     /* reset: closing and reopening the dialog used to keep the state from last
